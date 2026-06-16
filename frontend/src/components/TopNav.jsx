@@ -8,7 +8,7 @@ export default function TopNav({ activeTab, setActiveTab, canEdit, setCanEdit, d
         <button className={`tab-btn ${activeTab === 'tool' ? 'active' : ''}`} onClick={() => setActiveTab('tool')}>⊞ Campaign Tool</button>
       </div>
       <div className="spacer"></div>
-      <div className="proto-badge"><span className="proto-badge-dot"></span>Prototype</div>
+      {/* <div className="proto-badge"><span className="proto-badge-dot"></span>Prototype</div> */}
       <button className={`edit-toggle ${canEdit ? 'on' : ''}`} onClick={() => setCanEdit(!canEdit)}>
         {canEdit ? '✏️ Editing ON' : '🔒 View Only'}
       </button>

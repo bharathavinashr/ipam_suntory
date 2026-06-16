@@ -1,0 +1,19 @@
+resources:
+  apps:
+    ipam:
+      name: ipam-app
+      description: IPAM - React + FastAPI Application
+
+      resources:
+        - name: db_url_secret_dev
+          secret:
+            scope: my-app-secrets
+            key: db_url_secret_dev
+            permission: READ
+
+      config:
+        env:
+          - name: DATABASE_URL
+            valueFrom: db_url_secret_dev
+
+      source_code_path: .
