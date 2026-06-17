@@ -1,3 +1,6 @@
+command:
+  - bash
+  - start.sh
 env:
   - name: DATABASE_URL
     valueFrom: db_url_secret_dev
