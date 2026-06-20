@@ -24,10 +24,10 @@ select,input{outline:none}
 .proto-badge-dot{width:6px;height:6px;border-radius:50%;background:#ef4444;flex-shrink:0;animation:pulse 1.8s infinite}
 
 /* ─── LAYOUT ───────────────────────────────────────────────── */
-#app{display:flex;flex-direction:column;height:100vh}
-#topnav{flex-shrink:0;background:#ffffff;border-bottom:1px solid #e5e7eb;padding:0 18px;height:50px;display:flex;align-items:center;gap:12px;z-index:50;box-shadow:0 1px 3px rgba(0,0,0,.06)}
-#filterbar{flex-shrink:0;padding:7px 16px;background:#f9fafb;border-bottom:1px solid #e5e7eb;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-#tab-content{flex:1;overflow:hidden;display:flex;flex-direction:column;min-height:0}
+#app{display:flex;flex-direction:column;height:100vh;min-width:0;width:100%}
+#topnav{flex-shrink:0;background:#ffffff;border-bottom:1px solid #e5e7eb;padding:0 18px;min-height:50px;display:flex;align-items:center;gap:12px;z-index:50;box-shadow:0 1px 3px rgba(0,0,0,.06);flex-wrap:wrap}
+#filterbar{flex-shrink:0;padding:7px 16px;background:#f9fafb;border-bottom:1px solid #e5e7eb;display:flex;gap:10px;align-items:center;flex-wrap:wrap;width:100%}
+#tab-content{flex:1;overflow:hidden;display:flex;flex-direction:column;min-height:0;width:100%}
 
 /* ─── NAV ELEMENTS ─────────────────────────────────────────── */
 .logo{font-family:'Jost',Arial,sans-serif;font-weight:800;font-size:16px;color:#111111;letter-spacing:-.02em;white-space:nowrap}
@@ -45,14 +45,28 @@ select,input{outline:none}
 /* ─── FILTER BAR ───────────────────────────────────────────── */
 .filter-label{font-size:8px;color:#9ca3af;text-transform:uppercase;letter-spacing:.1em;white-space:nowrap}
 .chip-group{display:flex;gap:4px;flex-wrap:wrap;align-items:center}
-.chip{background:#ffffff;border:1px solid #e5e7eb;color:#6b7280;border-radius:20px;padding:3px 10px;font-size:10px;font-weight:700;cursor:pointer;transition:all .13s;white-space:nowrap;font-family:'Jost',Arial,sans-serif}
-.filter-select{background:#ffffff;border:1px solid #e5e7eb;border-radius:7px;color:#374151;padding:4px 8px;font-size:10px;cursor:pointer;max-width:180px}
+.chip{height:28px;padding:0 12px;border-radius:6px;border:1px solid #e5e7eb;background:#ffffff;color:#374151;font-size:11px;font-weight:500;cursor:pointer;transition:all .15s;white-space:nowrap;font-family:'Jost',Arial,sans-serif;display:inline-flex;align-items:center;box-sizing:border-box}
+.chip:hover{border-color:#6b7280;background:#f5f7fa}
+.chip.active{border-color:#030213;background:#030213;color:#fff}
+
+/* ─── MULTI-SELECT DROPDOWN ────────────────────────────────── */
+.ms-wrap{position:relative;display:inline-flex;align-items:center}
+.ms-trigger{height:28px;padding:0 10px;border-radius:6px;border:1px solid #e5e7eb;background:#ffffff;color:#374151;font-size:11px;font-weight:500;cursor:pointer;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;min-width:120px;max-width:200px;justify-content:space-between;transition:all .15s;box-sizing:border-box}
+.ms-trigger:hover{border-color:#6b7280;background:#f5f7fa}
+.ms-trigger.ms-active{border-color:#030213}
+.ms-placeholder{color:#9ca3af;font-weight:400;font-size:11px}
+.ms-value{color:#111111;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;font-size:11px}
+.chevron-sm{width:12px;height:12px;flex-shrink:0;color:#9ca3af}
+.ms-dropdown{position:absolute;top:calc(100% + 4px);left:0;z-index:9999;background:#ffffff;border:1px solid #e5e7eb;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.12);min-width:180px;max-width:260px;padding:4px 0;max-height:240px;overflow-y:auto}
+.ms-item{display:flex;align-items:center;gap:8px;padding:6px 12px;font-size:12px;cursor:pointer;color:#374151;transition:background .1s}
+.ms-item:hover{background:#f3f4f6}
+.ms-item input[type=checkbox]{accent-color:#030213;width:13px;height:13px;flex-shrink:0;cursor:pointer}
 
 /* ─── CALENDAR ─────────────────────────────────────────────── */
 #tab-calendar{flex:1;overflow:hidden;display:flex;flex-direction:column;min-height:0}
 #cal-wrap{flex:1;overflow:auto}
 #cal-info{padding:5px 16px;background:#f9fafb;border-bottom:1px solid #e5e7eb;display:flex;gap:8px;align-items:center;flex-shrink:0}
-.cal-table{border-collapse:collapse;min-width:1150px}
+.cal-table{border-collapse:collapse;min-width:1150px;width: 100%}
 .cal-table th,.cal-table td{border:1px solid #e5e7eb}
 .cal-th-q{background:#eff6ff;color:#1d4ed8;font-size:10px;font-weight:800;padding:5px 0;letter-spacing:.07em;text-align:center}
 .cal-th-section{background:#f3f4f6;font-size:8px;color:#9ca3af;padding:3px 7px;text-align:left}
@@ -71,21 +85,26 @@ select,input{outline:none}
 .camp-chip:hover .camp-chip-overlay{display:flex}
 .cal-add-cell{height:100%;min-height:36px;border-radius:5px;border:1.5px dashed #d1d5db;display:none;align-items:center;justify-content:center;cursor:pointer;color:#9ca3af;font-size:18px}
 .cal-cell:hover .cal-add-cell{display:flex}
+.camp-chip[draggable=true]{cursor:grab}
+.camp-chip[draggable=true]:active{cursor:grabbing;opacity:.7}
+.cal-drop-target{background:#eff6ff !important}
+.cal-drop-target .cal-add-cell{display:flex;border-color:#3B82F6;color:#3B82F6}
 .cal-legend{padding:6px 16px;background:#f9fafb;border-top:1px solid #e5e7eb;display:flex;gap:12px;align-items:center;flex-wrap:wrap;flex-shrink:0}
 .tier-dot{width:7px;height:7px;border-radius:2px;display:inline-block}
 
 /* ─── TOOL TAB ─────────────────────────────────────────────── */
-#tab-tool{flex:1;overflow:hidden;display:flex;flex-direction:column;min-height:0}
-#tool-wrap{flex:1;overflow-y:auto}
-.tool-header{padding:14px 18px;background:#f9fafb;border-bottom:1px solid #e5e7eb;flex-shrink:0}
-.stats-row{display:flex;gap:10px;margin-bottom:13px;flex-wrap:wrap}
+#tab-tool{flex:1;overflow:hidden;display:flex;flex-direction:column;min-height:0;width:100%}
+#tool-wrap{flex:1;overflow-y:auto;width:100%}
+.tool-header{padding:14px 18px;background:#f9fafb;border-bottom:1px solid #e5e7eb;flex-shrink:0;width:100%;box-sizing:border-box}
+.stats-row{display:flex;gap:10px;margin-bottom:13px;flex-wrap:wrap;width:100%}
 .stat-card{background:#ffffff;border:1px solid #e5e7eb;border-radius:12px;padding:10px 14px;flex:1;min-width:90px;box-shadow:0 1px 3px rgba(0,0,0,.05)}
 .stat-label{font-size:8px;color:#6b7280;letter-spacing:.1em;text-transform:uppercase;margin-bottom:5px}
 .stat-value{font-size:22px;font-weight:800;font-family:'Jost',Arial,sans-serif}
-.tool-filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-.search-input{background:#ffffff;border:1px solid #e5e7eb;border-radius:8px;padding:6px 11px;color:#111111;font-size:11px;width:170px}
-.new-btn{background:#3B82F6;border:none;color:#fff;border-radius:8px;padding:7px 14px;font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px;white-space:nowrap}
-.cards-grid{padding:14px 18px;display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:11px}
+.tool-filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center;width:100%}
+.search-input{background:#ffffff;border:1px solid #e5e7eb;border-radius:6px;padding:0 11px;height:28px;color:#111111;font-size:11px;min-width:150px;flex:1;max-width:220px;box-sizing:border-box}
+.new-btn{background:#030213;border:none;color:#fff;border-radius:6px;padding:0 14px;height:28px;font-size:11px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:5px;white-space:nowrap;transition:background .15s;box-sizing:border-box}
+.new-btn:hover{background:#1a1a2e}
+.cards-grid{padding:14px 18px;display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:11px;width:100%;box-sizing:border-box}
 .tool-card{background:#ffffff;border:1px solid #e5e7eb;border-radius:12px;padding:15px 17px;position:relative;overflow:hidden;border-left-width:3px;box-shadow:0 1px 4px rgba(0,0,0,.06)}
 .card-meta{font-size:8px;color:#6b7280;font-weight:700;letter-spacing:.1em;margin-bottom:3px}
 .card-name{font-family:'Jost',Arial,sans-serif;font-size:13px;font-weight:800;color:#111111;line-height:1.25}
@@ -196,8 +215,16 @@ select,input{outline:none}
 .txt-muted{color:#9ca3af;font-size:9px;letter-spacing:.1em;text-transform:uppercase}
 
 /* ─── RESPONSIVE ──────────────────────────────────────────── */
+@media(max-width:768px){
+  .stats-row{flex-wrap:wrap}
+  .stat-card{min-width:calc(50% - 5px)}
+  .ms-trigger{min-width:90px}
+  #filterbar{gap:6px}
+}
 @media(max-width:600px){
   .form-row{grid-template-columns:1fr}
   .grid-2{grid-template-columns:1fr}
   #datanavi{width:calc(100vw - 32px);right:16px}
+  .nav-divider{display:none}
+  .stat-card{min-width:100%}
 }

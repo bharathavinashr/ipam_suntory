@@ -38,11 +38,9 @@ export default function ToolView({ campaigns, onOpenDetail, onOpenForm, canEdit 
           <input className="search-input" placeholder="Search campaigns…" value={search} onChange={e => setSearch(e.target.value)} />
           <div className="chip-group">
             {['All', ...Object.keys(STATUS_COL)].map(s => {
-              const col = STATUS_COL[s] || '#3B82F6';
               const active = statusFilter === s;
               return (
                 <button key={s} className={`chip ${active ? 'active' : ''}`}
-                  style={active ? { background: col, borderColor: col, color: '#fff' } : {}}
                   onClick={() => setStatusFilter(s)}>{s}</button>
               );
             })}

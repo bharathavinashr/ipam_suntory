@@ -1,22 +1,66 @@
 import { useState, useEffect } from 'react';
 import { BRANDS_AU_NONALC, BRANDS_AU_ALC, BRANDS_NZ_NONALC, BRANDS_NZ_ALC,
-  CUSTS_NONALC, CUSTS_ALC, TIERS, STATUS_COL, PERSONAS, ALL_ROWS, ALL_MONTHS, bc } from '../constants';
+  CUSTS_NONALC, CUSTS_ALC, TIERS, STATUS_COL, PERSONAS, ALL_ROWS, bc } from '../constants';
 
 const DEFAULT = {
   name:'', brand:'V Energy', type:'NPD', tier:'Platinum', status:'Draft',
   channel:'Grocery', customer:'Woolworths Supermarket', market:'AU', category:'Non-Alc',
-  start_month:'jul26', end_month:'jul26', calendar_rows:['NPD1'],
-  fo_date:'', ld_date:'', budget:0, store_targets:0,
+  calendar_rows:['NPD1'], fo_date:'', ld_date:'', budget:0, store_targets:0,
   objective:'', success_criteria:'', notes:'', tags:[], personas:[],
 };
 
-export default function FormModal({ campaignId, campaigns, onClose, onSave }) {
+// Helper function to convert month key (e.g., "jan27") to a YYYY-MM-DD date format
+const getDefaultDate = (monthKey) => {
+  if (!monthKey) return '';
+  const mStr = monthKey.slice(0, 3).toLowerCase();
+  const yStr = monthKey.slice(3, 5);
+  const mNum = { 
+    jan: '01', feb: '02', mar: '03', apr: '04', may: '05', jun: '06', 
+    jul: '07', aug: '08', sep: '09', oct: '10', nov: '11', dec: '12' 
+  }[mStr];
+  
+  if (mNum && yStr.length === 2) {
+    return `20${yStr}-${mNum}-01`; // Defaults to the 1st of the month
+  }
+  return '';
+};
+
+// Helper function to convert YYYY-MM-DD back to an internal month key (e.g., "jan27")
+const getMonthKey = (dateString) => {
+  if (!dateString) return '';
+  const [yyyy, mm] = dateString.split('-');
+  if (!yyyy || !mm) return '';
+  const months = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+  return `${months[parseInt(mm, 10) - 1]}${yyyy.slice(2)}`;
+};
+
+export default function FormModal({ campaignId, campaigns, onClose, onSave, defaultMonth }) {
   const existing = campaignId ? campaigns.find(c => c.id === campaignId) : null;
-  const [form, setForm] = useState(existing || DEFAULT);
+  
+  const base = defaultMonth 
+    ? { 
+        ...DEFAULT, 
+        start_month: defaultMonth, 
+        end_month: defaultMonth, 
+        fo_date: getDefaultDate(defaultMonth),
+        ld_date: getDefaultDate(defaultMonth)
+      } 
+    : DEFAULT;
+    
+  const [form, setForm] = useState(existing || base);
 
   useEffect(() => {
-    setForm(existing || DEFAULT);
-  }, [campaignId]);
+    const b = defaultMonth 
+      ? { 
+          ...DEFAULT, 
+          start_month: defaultMonth, 
+          end_month: defaultMonth, 
+          fo_date: getDefaultDate(defaultMonth),
+          ld_date: getDefaultDate(defaultMonth)
+        } 
+      : DEFAULT;
+    setForm(existing || b);
+  }, [campaignId, defaultMonth, existing]);
 
   const isNew = !existing;
   const bList = form.market === 'NZ'
@@ -40,10 +84,20 @@ export default function FormModal({ campaignId, campaigns, onClose, onSave }) {
 
   const toggleArr = (arr, val) => arr.includes(val) ? arr.filter(x => x !== val) : [...arr, val];
 
+  // Validation rule: FO Date must be less than or equal to LD Date
+  const isDateInvalid = form.fo_date && form.ld_date && form.fo_date > form.ld_date;
+
   const handleSave = () => {
-    if (!form.name.trim()) return;
+    if (!form.name.trim() || isDateInvalid) return;
+
+    // Dynamically calculate the span of months based on the calendar dates selected
+    const s_month = form.fo_date ? getMonthKey(form.fo_date) : form.start_month;
+    const e_month = form.ld_date ? getMonthKey(form.ld_date) : form.end_month;
+
     const payload = {
       ...form,
+      start_month: s_month,
+      end_month: e_month,
       milestones: existing?.milestones || [
         { l:'Brief to Agency', d:'', done:false },
         { l:'Scamps Review', d:'', done:false },
@@ -126,21 +180,11 @@ export default function FormModal({ campaignId, campaigns, onClose, onSave }) {
                 {cList.map(v => <option key={v}>{v}</option>)}
               </select>
             </Field>
-            <Field label="Start Month">
-              <select value={form.start_month} onChange={e => set('start_month', e.target.value)}>
-                {ALL_MONTHS.map(m => <option key={m.k} value={m.k}>{m.f}</option>)}
-              </select>
-            </Field>
-            <Field label="End Month">
-              <select value={form.end_month} onChange={e => set('end_month', e.target.value)}>
-                {ALL_MONTHS.map(m => <option key={m.k} value={m.k}>{m.f}</option>)}
-              </select>
-            </Field>
             <Field label="FO Date">
-              <input value={form.fo_date} onChange={e => set('fo_date', e.target.value)} placeholder="e.g. 25/6" />
+              <input type="date" value={form.fo_date} onChange={e => set('fo_date', e.target.value)} />
             </Field>
             <Field label="LD Date">
-              <input value={form.ld_date} onChange={e => set('ld_date', e.target.value)} placeholder="e.g. 9/6" />
+              <input type="date" value={form.ld_date} onChange={e => set('ld_date', e.target.value)} />
             </Field>
             <Field label="Budget ($)">
               <input type="number" value={form.budget} onChange={e => set('budget', +e.target.value)} />
@@ -149,6 +193,12 @@ export default function FormModal({ campaignId, campaigns, onClose, onSave }) {
               <input type="number" value={form.store_targets} onChange={e => set('store_targets', +e.target.value)} />
             </Field>
           </div>
+
+          {isDateInvalid && (
+            <div style={{ color: '#ef4444', fontSize: 12, marginTop: 4, marginBottom: 8, fontWeight: 500 }}>
+              ⚠️ FO Date must be before or equal to LD Date.
+            </div>
+          )}
 
           <div className="field">
             <label>Objective</label>
@@ -190,7 +240,7 @@ export default function FormModal({ campaignId, campaigns, onClose, onSave }) {
 
         <div className="form-footer">
           <button className="cancel-btn" onClick={onClose}>Cancel</button>
-          <button className="save-btn" onClick={handleSave} disabled={!form.name.trim()}>
+          <button className="save-btn" onClick={handleSave} disabled={!form.name.trim() || isDateInvalid}>
             {isNew ? 'Create Campaign' : 'Save Changes'}
           </button>
         </div>

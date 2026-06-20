@@ -14,9 +14,10 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('calendar');
   const [canEdit, setCanEdit] = useState(false);
   const [dnOpen, setDnOpen] = useState(false);
-  const [filters, setFilters] = useState({ org:'Suntory Oceania', category:'All', brand:'All', customer:'All' });
+  const [filters, setFilters] = useState({ org:'Suntory Oceania', category:'All', brand:['All'], customer:['All'] });
   const [detailCampaign, setDetailCampaign] = useState(null);
-  const [formCampaignId, setFormCampaignId] = useState(undefined); // undefined=closed, null=new, string=edit
+  const [formCampaignId, setFormCampaignId] = useState(undefined);   // undefined=closed, null=new, string=edit
+  const [formDefaultMonth, setFormDefaultMonth] = useState(null);
 
   useEffect(() => {
     api.getCampaigns()
@@ -34,11 +35,15 @@ export default function App() {
 
   const filteredCampaigns = useMemo(() => {
     const market = filters.org === 'NZ' ? 'NZ' : 'AU';
+    const brandArr = Array.isArray(filters.brand) ? filters.brand : [filters.brand];
+    const custArr = Array.isArray(filters.customer) ? filters.customer : [filters.customer];
+    const brandAll = brandArr.includes('All') || brandArr.length === 0;
+    const custAll = custArr.includes('All') || custArr.length === 0;
     return campaigns.filter(c => {
       if (filters.org !== 'Suntory Oceania' && c.market?.toUpperCase() !== market) return false;
       if (filters.category !== 'All' && c.category !== filters.category) return false;
-      if (filters.brand !== 'All' && c.brand !== filters.brand) return false;
-      if (filters.customer !== 'All' && c.customer !== filters.customer) return false;
+      if (!brandAll && !brandArr.includes(c.brand)) return false;
+      if (!custAll && !custArr.includes(c.customer)) return false;
       return true;
     });
   }, [campaigns, filters]);
@@ -69,7 +74,13 @@ export default function App() {
       <div id="tab-content">
         {activeTab === 'calendar'
           ? <CalendarView campaigns={filteredCampaigns} filters={filters}
-              onOpenDetail={setDetailCampaign} onOpenForm={setFormCampaignId} canEdit={canEdit} />
+              onOpenDetail={setDetailCampaign}
+              onOpenForm={v => {
+                if (v && typeof v === 'object') { setFormCampaignId(v.id); setFormDefaultMonth(v.month); }
+                else { setFormCampaignId(v); setFormDefaultMonth(null); }
+              }}
+              onSave={handleSave}
+              canEdit={canEdit} />
           : <ToolView campaigns={filteredCampaigns}
               onOpenDetail={setDetailCampaign} onOpenForm={setFormCampaignId} canEdit={canEdit} />
         }
@@ -81,8 +92,8 @@ export default function App() {
       )}
 
       {formCampaignId !== undefined && (
-        <FormModal campaignId={formCampaignId} campaigns={campaigns}
-          onClose={() => setFormCampaignId(undefined)} onSave={handleSave} />
+        <FormModal campaignId={formCampaignId} campaigns={campaigns} defaultMonth={formDefaultMonth}
+          onClose={() => { setFormCampaignId(undefined); setFormDefaultMonth(null); }} onSave={handleSave} />
       )}
 
       {dnOpen
