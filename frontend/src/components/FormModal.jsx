@@ -5,7 +5,7 @@ import { BRANDS_AU_NONALC, BRANDS_AU_ALC, BRANDS_NZ_NONALC, BRANDS_NZ_ALC,
 const DEFAULT = {
   name:'', brand:'V Energy', type:'NPD', tier:'Platinum', status:'Draft',
   channel:'Grocery', customer:'Woolworths Supermarket', market:'AU', category:'Non-Alc',
-  calendar_rows:['NPD1'], fo_date:'', ld_date:'', budget:0, store_targets:0,
+  calendar_rows:['NPD1'], start_date:'', end_date:'', budget:0, store_targets:0,
   objective:'', success_criteria:'', notes:'', tags:[], personas:[],
 };
 
@@ -42,8 +42,8 @@ export default function FormModal({ campaignId, campaigns, onClose, onSave, defa
         ...DEFAULT, 
         start_month: defaultMonth, 
         end_month: defaultMonth, 
-        fo_date: getDefaultDate(defaultMonth),
-        ld_date: getDefaultDate(defaultMonth)
+        start_date: getDefaultDate(defaultMonth),
+        end_date: getDefaultDate(defaultMonth)
       } 
     : DEFAULT;
     
@@ -55,8 +55,8 @@ export default function FormModal({ campaignId, campaigns, onClose, onSave, defa
           ...DEFAULT, 
           start_month: defaultMonth, 
           end_month: defaultMonth, 
-          fo_date: getDefaultDate(defaultMonth),
-          ld_date: getDefaultDate(defaultMonth)
+          start_date: getDefaultDate(defaultMonth),
+          end_date: getDefaultDate(defaultMonth)
         } 
       : DEFAULT;
     setForm(existing || b);
@@ -84,15 +84,15 @@ export default function FormModal({ campaignId, campaigns, onClose, onSave, defa
 
   const toggleArr = (arr, val) => arr.includes(val) ? arr.filter(x => x !== val) : [...arr, val];
 
-  // Validation rule: FO Date must be less than or equal to LD Date
-  const isDateInvalid = form.fo_date && form.ld_date && form.fo_date > form.ld_date;
+  // Validation rule: Start Date must be less than or equal to End Date
+  const isDateInvalid = form.start_date && form.end_date && form.start_date > form.end_date;
 
   const handleSave = () => {
     if (!form.name.trim() || isDateInvalid) return;
 
     // Dynamically calculate the span of months based on the calendar dates selected
-    const s_month = form.fo_date ? getMonthKey(form.fo_date) : form.start_month;
-    const e_month = form.ld_date ? getMonthKey(form.ld_date) : form.end_month;
+    const s_month = form.start_date ? getMonthKey(form.start_date) : form.start_month;
+    const e_month = form.end_date ? getMonthKey(form.end_date) : form.end_month;
 
     const payload = {
       ...form,
@@ -180,11 +180,11 @@ export default function FormModal({ campaignId, campaigns, onClose, onSave, defa
                 {cList.map(v => <option key={v}>{v}</option>)}
               </select>
             </Field>
-            <Field label="FO Date">
-              <input type="date" value={form.fo_date} onChange={e => set('fo_date', e.target.value)} />
+            <Field label="Start Date">
+              <input type="date" value={form.start_date} onChange={e => set('start_date', e.target.value)} />
             </Field>
-            <Field label="LD Date">
-              <input type="date" value={form.ld_date} onChange={e => set('ld_date', e.target.value)} />
+            <Field label="End Date">
+              <input type="date" value={form.end_date} onChange={e => set('end_date', e.target.value)} />
             </Field>
             <Field label="Budget ($)">
               <input type="number" value={form.budget} onChange={e => set('budget', +e.target.value)} />
@@ -196,7 +196,7 @@ export default function FormModal({ campaignId, campaigns, onClose, onSave, defa
 
           {isDateInvalid && (
             <div style={{ color: '#ef4444', fontSize: 12, marginTop: 4, marginBottom: 8, fontWeight: 500 }}>
-              ⚠️ FO Date must be before or equal to LD Date.
+              ⚠️ Start Date must be before or equal to End Date.
             </div>
           )}
 

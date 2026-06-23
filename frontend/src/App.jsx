@@ -14,7 +14,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('calendar');
   const [canEdit, setCanEdit] = useState(false);
   const [dnOpen, setDnOpen] = useState(false);
-  const [filters, setFilters] = useState({ org:'Suntory Oceania', category:'All', brand:['All'], customer:['All'] });
+  const [filters, setFilters] = useState({ org:'AU & NZ', category:'All', brand:['All'], customer:['All'] });
   const [detailCampaign, setDetailCampaign] = useState(null);
   const [formCampaignId, setFormCampaignId] = useState(undefined);   // undefined=closed, null=new, string=edit
   const [formDefaultMonth, setFormDefaultMonth] = useState(null);
@@ -39,8 +39,10 @@ export default function App() {
     const custArr = Array.isArray(filters.customer) ? filters.customer : [filters.customer];
     const brandAll = brandArr.includes('All') || brandArr.length === 0;
     const custAll = custArr.includes('All') || custArr.length === 0;
+  
     return campaigns.filter(c => {
-      if (filters.org !== 'Suntory Oceania' && c.market?.toUpperCase() !== market) return false;
+      // Check for AU & NZ dynamically
+      if (filters.org !== 'AU & NZ' && c.market?.toUpperCase() !== market) return false;
       if (filters.category !== 'All' && c.category !== filters.category) return false;
       if (!brandAll && !brandArr.includes(c.brand)) return false;
       if (!custAll && !custArr.includes(c.customer)) return false;
@@ -65,11 +67,21 @@ export default function App() {
 
   return (
     <div id="app">
-      <TopNav activeTab={activeTab} setActiveTab={setActiveTab}
-        canEdit={canEdit} setCanEdit={setCanEdit}
-        dnOpen={dnOpen} setDnOpen={setDnOpen} />
+      {/* 1. canEdit and setCanEdit removed from TopNav */}
+      <TopNav 
+        activeTab={activeTab} 
+        setActiveTab={setActiveTab}
+        dnOpen={dnOpen} 
+        setDnOpen={setDnOpen} 
+      />
 
-      <FilterBar filters={filters} setFilters={setFilters} />
+      {/* 2. canEdit and setCanEdit added to FilterBar */}
+      <FilterBar 
+        filters={filters} 
+        setFilters={setFilters} 
+        canEdit={canEdit}
+        setCanEdit={setCanEdit}
+      />
 
       <div id="tab-content">
         {activeTab === 'calendar'

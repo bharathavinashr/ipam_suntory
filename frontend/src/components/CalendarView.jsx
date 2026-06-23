@@ -44,7 +44,17 @@ export default function CalendarView({ campaigns, filters, onOpenDetail, canEdit
         if (!placed) lanes.push([item]);
       });
 
-      if (lanes.length === 0) lanes.push([]); // Ensure empty rows still render
+      const hasEntries = lanes.length > 0;
+
+      if (lanes.length === 0) {
+        lanes.push([]); // Ensure empty rows still render
+      }
+
+      // Add an extra empty lane if editing is ON and the row already has entries
+      if (canEdit && hasEntries) {
+        lanes.push([]);
+      }
+
       rowLanes[row.k] = lanes;
       totalLanes += lanes.length;
     });
@@ -53,15 +63,6 @@ export default function CalendarView({ campaigns, filters, onOpenDetail, canEdit
 
   return (
     <div id="tab-calendar" style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-      <div id="cal-info">
-        <span style={{ fontSize: 10, color: '#4A1D7A', fontWeight: 800 }}>◆</span>
-        <span style={{ fontSize: 10, fontWeight: 700, color: '#C084FC' }}>Suntory Oceania</span>
-        <span style={{ fontSize: 9, color: '#334155' }}> · Alc &amp; Non-Alc · </span>
-        <span style={{ fontSize: 9, color: '#60A5FA', fontWeight: 700 }}>{market}</span>
-        <span style={{ fontSize: 9, color: '#334155' }}> · Q2 2026 → Q3 2027</span>
-        <div className="spacer"></div>
-        {canEdit && <span style={{ fontSize: 9, color: '#10B981', animation: 'pulse 2s infinite' }}>● Hover cell to add or Drag to move</span>}
-      </div>
       <div id="cal-wrap">
         <table className="cal-table">
           <thead>
@@ -83,7 +84,10 @@ export default function CalendarView({ campaigns, filters, onOpenDetail, canEdit
               let groupLaneIdx = 0;
               return group.rows.map((row, ri) => {
                 const lanes = rowLanes[row.k];
-                const tierAc = TIERS[row.k]?.acc || group.col;
+                
+                // Determine if this row corresponds to a Tier to show the weight tooltip
+                const tierKey = Object.keys(TIERS).find(k => k.toUpperCase() === row.k.toUpperCase());
+                const tierConfig = tierKey ? TIERS[tierKey] : null;
 
                 return lanes.map((lane, li) => {
                   const isFirstInGroup = groupLaneIdx === 0;
@@ -138,9 +142,9 @@ export default function CalendarView({ campaigns, filters, onOpenDetail, canEdit
                             onDragEnd={canEdit ? () => { dragRef.current = null; setDropTarget(null); } : undefined}
                             onClick={() => onOpenDetail(camp)}>
                             <div className="camp-chip-name" style={{ color: cfg.txt }}>{camp.name}</div>
-                            {(camp.fo_date || camp.ld_date) && (
+                            {(camp.start_date || camp.end_date) && (
                               <div className="camp-chip-detail" style={{ color: cfg.txt }}>
-                                {camp.fo_date}{camp.fo_date && camp.ld_date ? ' · ' : ''}{camp.ld_date}
+                                {camp.start_date}{camp.start_date && camp.end_date ? ' · ' : ''}{camp.end_date}
                               </div>
                             )}
                             <div className="camp-chip-overlay">👁</div>
@@ -185,10 +189,39 @@ export default function CalendarView({ campaigns, filters, onOpenDetail, canEdit
                   return (
                     <tr key={`${row.k}-${li}`} className={ri % 2 === 0 ? 'cal-row-even' : 'cal-row-odd'}>
                       {isFirstInGroup && (
-                        <td className="cal-section-cell" rowSpan={groupRowSpans[gi]} style={{ color: group.col }}>{group.sec}</td>
+                        <td className="cal-section-cell" rowSpan={groupRowSpans[gi]}>{group.sec}</td>
                       )}
                       {isFirstInRow && (
-                        <td className="cal-row-label" rowSpan={lanes.length} style={{ color: tierAc }}>{row.l}</td>
+                        <td className="cal-row-label" rowSpan={lanes.length}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <span>{row.l}</span>
+                            {tierConfig && (
+                              <span 
+                                title={`Tier Weight: ${tierConfig.w}`}
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  width: 14,
+                                  height: 14,
+                                  borderRadius: '50%',
+                                  background: '#f3f4f6',
+                                  border: '1px solid #d1d5db',
+                                  color: '#6b7280',
+                                  fontSize: 10,
+                                  fontWeight: 'normal',
+                                  fontStyle: 'italic',
+                                  fontFamily: 'serif',      // Makes it look like a classic "i" icon
+                                  textTransform: 'none',    // Overrides the uppercase from .cal-row-label
+                                  cursor: 'pointer',        // Replaces the "?" help cursor with a hand pointer
+                                  marginLeft: 4
+                                }}
+                              >
+                                i
+                              </span>
+                            )}
+                          </div>
+                        </td>
                       )}
                       {cells}
                     </tr>
@@ -198,18 +231,6 @@ export default function CalendarView({ campaigns, filters, onOpenDetail, canEdit
             })}
           </tbody>
         </table>
-      </div>
-      <div className="cal-legend">
-        <span className="txt-muted">Tier Weights</span>
-        {Object.entries(TIERS).map(([t, cfg]) => (
-          <div key={t} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            <div className="tier-dot" style={{ background: cfg.acc }}></div>
-            <span style={{ fontSize: 8, color: cfg.acc, fontWeight: 700 }}>{t}</span>
-            <span style={{ fontSize: 8, color: '#334155' }}>{cfg.w}</span>
-          </div>
-        ))}
-        <div className="spacer"></div>
-        <span style={{ fontSize: 8, color: '#1E293B' }}>budmp_sbfo_dev.data_science.{market.toLowerCase()}_iap_calendar</span>
       </div>
     </div>
   );

@@ -43,7 +43,7 @@ select,input{outline:none}
 .datanavi-btn.open{background:#dbeafe;border-color:#3B82F6;color:#1d4ed8}
 
 /* ─── FILTER BAR ───────────────────────────────────────────── */
-.filter-label{font-size:8px;color:#9ca3af;text-transform:uppercase;letter-spacing:.1em;white-space:nowrap}
+.filter-label{font-size:12px;color:#0a0a0a;letter-spacing:.1em;white-space:nowrap}
 .chip-group{display:flex;gap:4px;flex-wrap:wrap;align-items:center}
 .chip{height:28px;padding:0 12px;border-radius:6px;border:1px solid #e5e7eb;background:#ffffff;color:#374151;font-size:11px;font-weight:500;cursor:pointer;transition:all .15s;white-space:nowrap;font-family:'Jost',Arial,sans-serif;display:inline-flex;align-items:center;box-sizing:border-box}
 .chip:hover{border-color:#6b7280;background:#f5f7fa}
@@ -68,14 +68,14 @@ select,input{outline:none}
 #cal-info{padding:5px 16px;background:#f9fafb;border-bottom:1px solid #e5e7eb;display:flex;gap:8px;align-items:center;flex-shrink:0}
 .cal-table{border-collapse:collapse;min-width:1150px;width: 100%}
 .cal-table th,.cal-table td{border:1px solid #e5e7eb}
-.cal-th-q{background:#eff6ff;color:#1d4ed8;font-size:10px;font-weight:800;padding:5px 0;letter-spacing:.07em;text-align:center}
-.cal-th-section{background:#f3f4f6;font-size:8px;color:#9ca3af;padding:3px 7px;text-align:left}
+.cal-th-q{background:#eff6ff;color:#0a0a0a;font-size:10px;font-weight:800;padding:5px 0;letter-spacing:.07em;text-align:center}
+.cal-th-section{background:#f3f4f6;font-size:8px;color:#0a0a0a;padding:3px 7px;text-align:left}
 .cal-th-month{background:#eff6ff;font-size:9px;color:#374151;font-weight:600;padding:4px 2px;text-align:center;min-width:72px}
-.cal-th-month small{display:block;font-size:7px;color:#9ca3af;font-weight:400}
+.cal-th-month small{display:block;font-size:7px;color:#0a0a0a;font-weight:400}
 .cal-row-even{background:#ffffff}
 .cal-row-odd{background:#fafafa}
-.cal-section-cell{background:#f3f4f6;padding:0 5px;text-align:center;writing-mode:vertical-rl;font-size:8px;font-weight:800;letter-spacing:.15em;text-transform:uppercase;vertical-align:middle;width:28px;color:#374151}
-.cal-row-label{background:#f9fafb;padding:3px 8px;font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;width:76px;color:#374151}
+.cal-section-cell{background:#f3f4f6;padding:0 5px;text-align:center;writing-mode:vertical-rl;font-size:8px;font-weight:800;letter-spacing:.15em;text-transform:uppercase;vertical-align:middle;width:28px;color:#0a0a0a}
+.cal-row-label{background:#f9fafb;padding:3px 8px;font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;width:76px;color:#0a0a0a}
 .cal-cell{padding:2px;min-width:72px;height:42px;position:relative}
 .camp-chip{border-radius:5px;padding:3px 5px;height:100%;min-height:36px;cursor:pointer;transition:opacity .12s;position:relative;overflow:hidden}
 .camp-chip:hover{opacity:.8}
@@ -102,7 +102,7 @@ select,input{outline:none}
 .stat-value{font-size:22px;font-weight:800;font-family:'Jost',Arial,sans-serif}
 .tool-filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center;width:100%}
 .search-input{background:#ffffff;border:1px solid #e5e7eb;border-radius:6px;padding:0 11px;height:28px;color:#111111;font-size:11px;min-width:150px;flex:1;max-width:220px;box-sizing:border-box}
-.new-btn{background:#030213;border:none;color:#fff;border-radius:6px;padding:0 14px;height:28px;font-size:11px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:5px;white-space:nowrap;transition:background .15s;box-sizing:border-box}
+.new-btn{background:#fff;border:1px solid #dcdfe6;;border-radius:6px;padding:0 14px;height:28px;font-size:11px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:5px;white-space:nowrap;transition:background .15s;box-sizing:border-box}
 .new-btn:hover{background:#1a1a2e}
 .cards-grid{padding:14px 18px;display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:11px;width:100%;box-sizing:border-box}
 .tool-card{background:#ffffff;border:1px solid #e5e7eb;border-radius:12px;padding:15px 17px;position:relative;overflow:hidden;border-left-width:3px;box-shadow:0 1px 4px rgba(0,0,0,.06)}
@@ -110,9 +110,9 @@ select,input{outline:none}
 .card-name{font-family:'Jost',Arial,sans-serif;font-size:13px;font-weight:800;color:#111111;line-height:1.25}
 .card-brand{font-size:10px;color:#6b7280;margin-top:2px;margin-bottom:9px}
 .card-tags{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:9px}
-.tier-badge{border-radius:4px;padding:1px 6px;font-size:8px;font-weight:800;text-transform:uppercase}
+.tier-badge{border-radius:4px;padding:1px 6px;font-size:8px;font-weight:800;}
 .brand-badge{border-radius:4px;padding:1px 6px;font-size:8px;font-weight:700}
-.status-badge{border-radius:4px;padding:2px 7px;font-size:8px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;display:flex;align-items:center;gap:4px;white-space:nowrap}
+.status-badge{border-radius:4px;padding:2px 7px;font-size:8px;font-weight:700;letter-spacing:.06em;display:flex;align-items:center;gap:4px;white-space:nowrap}
 .status-dot{width:4px;height:4px;border-radius:50%;display:inline-block}
 .progress-bar-bg{background:#e5e7eb;border-radius:3px;height:3px;overflow:hidden}
 .progress-bar-fill{height:100%;border-radius:3px}
@@ -228,3 +228,201 @@ select,input{outline:none}
   .nav-divider{display:none}
   .stat-card{min-width:100%}
 }
+
+/* ─── LOGO HEADER ──────────────────────────────────────────── */
+.logo-header-wrap {
+  background: #00325D;
+  width: 100%;
+  flex-shrink: 0;
+}
+
+.logo-header {
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 16px 24px;
+}
+
+.header-logo {
+  height: 40px;
+  width: auto;
+  display: block;
+}
+
+/* ─── NEW TOP NAV & HEADER LAYOUT ───────────────────────────── */
+
+#topnav.main-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 20px 24px;
+  background: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
+  box-shadow: 0 1px 3px rgba(0,0,0,.06);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  gap: 16px;
+  min-height: auto;
+}
+
+.header-left {
+  flex: 1;
+  min-width: 320px;
+}
+
+.title-with-logo {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+
+.page-title {
+  font-family: 'Jost', Arial, sans-serif;
+  font-size: 28px;
+  font-weight: 500;
+  margin: 0;
+  color: #111111;
+  line-height: 1.2;
+}
+
+.page-subtitle {
+  font-family: 'Jost', Arial, sans-serif;
+  font-weight: 400;
+  font-size: 15px;
+  color: #6b7280;
+  margin: 0;
+}
+
+.header-right {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-end;
+  flex-wrap: nowrap;
+  justify-content: flex-start;
+}
+
+/* ─── BLACK ICON BUTTONS (Matches Vue ElementPlus styling) ─── */
+.black-icon-btn {
+  width: 200px;
+  height: 36px;
+  background-color: #ffffff;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  color: #000000;
+  font-size: 13px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 8px 15px;
+  gap: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: 'Jost', Arial, sans-serif;
+  box-sizing: border-box;
+}
+
+.black-icon-btn:hover {
+  background-color: #f5f7fa;
+  border-color: #c0c4cc;
+}
+
+.black-icon-btn.active-btn {
+  background-color: #f0fdf4; /* Light green tint for active state */
+  border-color: #16a34a;
+  color: #15803d;
+  font-weight: 600;
+}
+
+.black-icon-btn .btn-icon {
+  font-size: 15px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  color: #000000; /* Keeps the icon specifically black */
+}
+
+.black-icon-btn.active-btn .btn-icon {
+  color: #15803d;
+}
+
+/* ─── RESPONSIVE FALLBACK ──────────────────────────────────── */
+@media (max-width: 768px) {
+  #topnav.main-header {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 16px;
+  }
+  .page-title {
+    font-size: 22px;
+  }
+  .header-right {
+    width: 100%;
+    align-items: flex-start;
+  }
+  .black-icon-btn {
+    width: 100%; /* Make buttons full width on small screens */
+  }
+}
+
+/* ─── FILTER BAR ───────────────────────────────────────────── */
+.filter-label{font-size:12px;color:#0a0a0a;letter-spacing:.1em;white-space:nowrap}
+.chip-group{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  height: 32px;
+  padding: 5px 14px;
+  border-radius: 6px;
+  border: 1px solid #dcdfe6;
+  background: #ffffff;
+  color: #111111;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+  font-family: 'Jost', Arial, sans-serif;
+  box-sizing: border-box;
+}
+
+.chip:hover {
+  border-color: #6b7280;
+  background: #f5f7fa;
+}
+
+.chip.active {
+  border-color: #030213;
+  background: #030213;
+  color: #ffffff;
+}
+
+/* Update multi-select triggers to match the new chip styling heights/fonts */
+.ms-trigger {
+  height: 32px;
+  padding: 5px 14px;
+  border-radius: 6px;
+  border: 1px solid #dcdfe6;
+  background: #ffffff;
+  color: #111111;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  min-width: 140px;
+  max-width: 220px;
+  justify-content: space-between;
+  transition: all 0.15s;
+  box-sizing: border-box;
+  font-family: 'Jost', Arial, sans-serif;
+}
+.ms-trigger:hover { border-color: #6b7280; background: #f5f7fa; }
+.ms-trigger.ms-active { border-color: #030213; }
+.ms-placeholder { color: #9ca3af; font-weight: 400; font-size: 13px; }
+.ms-value { color: #111111; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; font-size: 13px; text-align: left; }

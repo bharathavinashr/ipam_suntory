@@ -6,20 +6,27 @@ export const CUSTS_NONALC = ["All Customers","Coles Supermarket","Woolworths Sup
 export const CUSTS_ALC = ["All Customers","Dan Murphy's","BWS","Liquorland","Cellarbrations","Bottle-O","Bottlemart"];
 
 export const BRAND_CFG = {
-  "V Energy":           { bg:"#1A3A0A", bdr:"#365314", txt:"#ECFCCB", dot:"#A3E635" },
-  "Suntory BOSS Coffee":{ bg:"#3B1F0A", bdr:"#78350F", txt:"#FEF3C7", dot:"#FBBF24" },
-  "Ribena":             { bg:"#581C87", bdr:"#7E22CE", txt:"#F3E8FF", dot:"#A855F7" },
-  "Celsius":            { bg:"#14532D", bdr:"#166534", txt:"#D1FAE5", dot:"#34D399" },
-  "Pepsi":              { bg:"#1E3A8A", bdr:"#1D4ED8", txt:"#DBEAFE", dot:"#60A5FA" },
-  "Gatorade":           { bg:"#134E4A", bdr:"#0F766E", txt:"#CCFBF1", dot:"#2DD4BF" },
-  "UP&GO":              { bg:"#7C2D12", bdr:"#C2410C", txt:"#FED7AA", dot:"#FB923C" },
-  "Suntory -196":       { bg:"#4A1D7A", bdr:"#6B2FA0", txt:"#F3E8FF", dot:"#C084FC" },
-  "Jim Beam":           { bg:"#422006", bdr:"#7C3306", txt:"#FEF3C7", dot:"#D97706" },
-  "Canadian Club":      { bg:"#3D1F06", bdr:"#92400E", txt:"#FEF3C7", dot:"#F59E0B" },
-  "Yamazaki":           { bg:"#2D1B00", bdr:"#713F12", txt:"#FEF3C7", dot:"#EAB308" },
-  "Roku":               { bg:"#052E16", bdr:"#065F46", txt:"#D1FAE5", dot:"#10B981" },
-  "Maximus":            { bg:"#1E293B", bdr:"#334155", txt:"#CBD5E1", dot:"#94A3B8" },
-  "default":            { bg:"#1E293B", bdr:"#334155", txt:"#CBD5E1", dot:"#94A3B8" },
+  // 100% Solid Base Colors
+  "V Energy":           { bg:"#0ECC73", bdr:"#0ECC73", txt:"#000", dot:"#0ECC73" },
+  "Suntory BOSS Coffee":{ bg:"#004A79", bdr:"#004A79", txt:"#FFFFFF", dot:"#004A79" },
+  "Ribena":             { bg:"#00325D", bdr:"#00325D", txt:"#FFFFFF", dot:"#00325D" },
+  "Celsius":            { bg:"#666B6E", bdr:"#666B6E", txt:"#FFFFFF", dot:"#666B6E" },
+  "Pepsi":              { bg:"#3E3A39", bdr:"#3E3A39", txt:"#FFFFFF", dot:"#3E3A39" },
+  
+  // 50% Tint/Opacity Colors (80 hex)
+  "Gatorade":           { bg:"#4AD996", bdr:"#4AD996", txt:"#000", dot:"#4AD996" },
+  "UP&GO":              { bg:"#004A7980", bdr:"#004A7980", txt:"#FFFFFF", dot:"#004A79" },
+  "Suntory -196":       { bg:"#00325D80", bdr:"#00325D80", txt:"#FFFFFF", dot:"#00325D" },
+  "Jim Beam":           { bg:"#666B6E80", bdr:"#666B6E80", txt:"#FFFFFF", dot:"#666B6E" },
+  "Canadian Club":      { bg:"#3E3A3980", bdr:"#3E3A3980", txt:"#FFFFFF", dot:"#3E3A39" },
+
+  // 25% Tint/Opacity Colors (40 hex)
+  "Yamazaki":           { bg:"#87E6B9", bdr:"#87E6B9", txt:"#000", dot:"#87E6B9" },
+  "Roku":               { bg:"#004A7940", bdr:"#004A7940", txt:"#FFFFFF", dot:"#004A79" },
+  "Maximus":            { bg:"#00325D40", bdr:"#00325D40", txt:"#FFFFFF", dot:"#00325D" },
+  
+  // Default Fallback
+  "default":            { bg:"#666B6E40", bdr:"#666B6E40", txt:"#FFFFFF", dot:"#666B6E" },
 };
 
 export const TIERS = {
@@ -75,11 +82,11 @@ export const fmt = (n) => n >= 1000000 ? `$${(n / 1e6).toFixed(1)}M` : `$${(n / 
 export const getActiveBrands = (org, category) => {
   let sets = [];
   const isAll = !category || category === 'All';
-  if (org === 'Suntory Oceania' || org === 'AU') {
+  if (org === 'AU & NZ' || org === 'AU') {
     if (isAll || category === 'Non-Alc') sets.push(...BRANDS_AU_NONALC);
     if (isAll || category === 'Alc') sets.push(...BRANDS_AU_ALC);
   }
-  if (org === 'Suntory Oceania' || org === 'NZ') {
+  if (org === 'AU & NZ' || org === 'NZ') {
     if (isAll || category === 'Non-Alc') sets.push(...BRANDS_NZ_NONALC);
     if (isAll || category === 'Alc') sets.push(...BRANDS_NZ_ALC);
   }

@@ -50,29 +50,31 @@ function MultiSelect({ label, options, selected, onChange, placeholder }) {
   );
 }
 
-export default function FilterBar({ filters, setFilters }) {
+// Ensure you add canEdit and setCanEdit to your props here!
+export default function FilterBar({ filters, setFilters, canEdit, setCanEdit }) {
   const brands = getActiveBrands(filters.org, filters.category).filter(b => b !== 'All');
   const customers = getActiveCustomers(filters.category).filter(c => c !== 'All' && c !== 'All Customers');
 
   const selectedBrands = Array.isArray(filters.brand) ? filters.brand : [filters.brand || 'All'];
   const selectedCustomers = Array.isArray(filters.customer) ? filters.customer : [filters.customer || 'All'];
 
-  const setOrg = (val) => setFilters(f => ({ ...f, org: f.org === val ? 'Suntory Oceania' : val, brand: ['All'], customer: ['All'] }));
+  const setOrg = (val) => setFilters(f => ({ ...f, org: f.org === val ? 'AU & NZ' : val, brand: ['All'], customer: ['All'] }));
   const setCat = (val) => setFilters(f => ({ ...f, category: f.category === val ? 'All' : val, brand: ['All'], customer: ['All'] }));
-
-  const orgColors = { 'Suntory Oceania': '#7C3AED', AU: '#7C3AED', NZ: '#7C3AED' };
-  const catColors = { All: '#475569', 'Non-Alc': '#059669', Alc: '#DC2626' };
 
   return (
     <div id="filterbar">
-      <span className="filter-label">Org</span>
+      <span className="filter-label">Country</span>
       <div className="chip-group">
-        {['Suntory Oceania', 'AU', 'NZ'].map(o => {
+        {['AU & NZ', 'AU', 'NZ'].map(o => {
           const active = filters.org === o;
           return (
-            <button key={o} className={`chip ${active ? 'active' : ''}`}
-              style={active ? { background: orgColors[o], borderColor: orgColors[o], color: '#fff' } : {}}
-              onClick={() => setOrg(o)}>{o}</button>
+            <button 
+              key={o} 
+              className={`chip ${active ? 'active' : ''}`}
+              onClick={() => setOrg(o)}
+            >
+              {o}
+            </button>
           );
         })}
       </div>
@@ -81,11 +83,14 @@ export default function FilterBar({ filters, setFilters }) {
       <div className="chip-group">
         {['All', 'Non-Alc', 'Alc'].map(c => {
           const active = filters.category === c;
-          const col = catColors[c];
           return (
-            <button key={c} className={`chip ${active ? 'active' : ''}`}
-              style={active ? { background: col, borderColor: col, color: '#fff' } : {}}
-              onClick={() => setCat(c)}>{c}</button>
+            <button 
+              key={c} 
+              className={`chip ${active ? 'active' : ''}`}
+              onClick={() => setCat(c)}
+            >
+              {c}
+            </button>
           );
         })}
       </div>
@@ -105,7 +110,17 @@ export default function FilterBar({ filters, setFilters }) {
         selected={selectedCustomers}
         onChange={val => setFilters(f => ({ ...f, customer: val }))}
       />
+      
+      {/* Pushes the edit button to the far right */}
       <div className="spacer"></div>
+      
+      <button 
+        className={`chip ${canEdit ? 'active' : ''}`} 
+        onClick={() => setCanEdit(!canEdit)}
+        style={{ fontWeight: 600 }}
+      >
+        {canEdit ? '✏️ Editing Table' : '🔒 Edit Table'}
+      </button>
     </div>
   );
 }

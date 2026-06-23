@@ -30,7 +30,7 @@ export default function ToolView({ campaigns, onOpenDetail, onOpenForm, canEdit 
           {stats.map(s => (
             <div key={s.l} className="stat-card">
               <div className="stat-label">{s.l}</div>
-              <div className="stat-value" style={{ color: s.c }}>{s.v}</div>
+              <div className="stat-value">{s.v}</div>
             </div>
           ))}
         </div>
@@ -63,11 +63,14 @@ export default function ToolView({ campaigns, onOpenDetail, onOpenForm, canEdit 
 
 function CampaignCard({ campaign: c, onOpenDetail, onOpenForm, canEdit }) {
   const tc = TIERS[c.tier] || TIERS.Silver;
+  const brandCfg = bc(c.brand); // Fetch the brand's color configuration
   const launch = c.start_month ? c.start_month.replace(/(\d+)$/, " '$1").toUpperCase() : '';
+  
   return (
-    <div className="tool-card" style={{ borderLeftColor: tc.acc }}>
+    // Replaced tc.acc with brandCfg.bdr (solid brand color) for the left border
+    <div className="tool-card" style={{ borderLeftColor: brandCfg.bdr }}>
       <div style={{ position:'absolute', top:0, right:0, width:60, height:60,
-        background:`radial-gradient(circle at top right,${tc.acc}08,transparent 70%)`,
+        background:`radial-gradient(circle at top right,${brandCfg.bdr}15,transparent 70%)`,
         pointerEvents:'none', borderRadius:12 }}></div>
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:9 }}>
         <div style={{ flex:1, paddingRight:8 }}>
@@ -84,12 +87,12 @@ function CampaignCard({ campaign: c, onOpenDetail, onOpenForm, canEdit }) {
       </div>
       <div style={{ display:'flex', justifyContent:'space-between', marginBottom:9 }}>
         <div>
-          <div style={{ fontSize:7, color:'#475569', textTransform:'uppercase', letterSpacing:'.08em', marginBottom:2 }}>Launch</div>
+          <div style={{ fontSize:7, color:'#475569', letterSpacing:'.08em', marginBottom:2 }}>Launch</div>
           <div style={{ fontSize:10, color:'#94A3B8' }}>{launch}</div>
         </div>
         <div style={{ textAlign:'right' }}>
-          <div style={{ fontSize:7, color:'#475569', textTransform:'uppercase', letterSpacing:'.08em', marginBottom:2 }}>Budget</div>
-          <div style={{ fontSize:12, fontWeight:700, color:tc.acc }}>{fmt(c.budget)}</div>
+          <div style={{ fontSize:7, color:'#475569', letterSpacing:'.08em', marginBottom:2 }}>Budget</div>
+          <div style={{ fontSize:12, fontWeight:700 }}>{fmt(c.budget)}</div>
         </div>
       </div>
       <ProgressBar milestones={c.milestones || []} tier={c.tier} />

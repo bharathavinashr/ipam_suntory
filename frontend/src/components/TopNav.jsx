@@ -1,20 +1,38 @@
-export default function TopNav({ activeTab, setActiveTab, canEdit, setCanEdit, dnOpen, setDnOpen }) {
+import logoUrl from '../assets/SuntoryOceania-Logo-RGB-Reversed.png';
+
+export default function TopNav({ activeTab, setActiveTab }) {
   return (
-    <nav id="topnav">
-      <div className="logo"><span>◈</span> IPAM<small>Campaign Management</small></div>
-      <div className="nav-divider"></div>
-      <div className="tab-group">
-        <button className={`tab-btn ${activeTab === 'calendar' ? 'active' : ''}`} onClick={() => setActiveTab('calendar')}>▦ Calendar</button>
-        <button className={`tab-btn ${activeTab === 'tool' ? 'active' : ''}`} onClick={() => setActiveTab('tool')}>⊞ Campaign Tool</button>
+    <>
+      <div className="logo-header-wrap">
+        <header className="logo-header">
+          <img src={logoUrl} alt="Suntory Oceania" className="header-logo" />
+        </header>
       </div>
-      <div className="spacer"></div>
-      {/* <div className="proto-badge"><span className="proto-badge-dot"></span>Prototype</div> */}
-      <button className={`edit-toggle ${canEdit ? 'on' : ''}`} onClick={() => setCanEdit(!canEdit)}>
-        {canEdit ? '✏️ Editing ON' : '🔒 View Only'}
-      </button>
-      <button className={`datanavi-btn ${dnOpen ? 'open' : ''}`} onClick={() => setDnOpen(!dnOpen)}>
-        <span>◈</span> DataNavi
-      </button>
-    </nav>
+      
+      <nav id="topnav" className="main-header">
+        <div className="header-left">
+          <div className="title-with-logo">
+            <h1 className="page-title">Campaign Management Tool</h1>
+          </div>
+        </div>
+
+        {/* Overriding the flex-direction to row so they sit side by side */}
+        <div className="header-right" style={{ flexDirection: 'row' }}>
+          <button 
+            className={`black-icon-btn ${activeTab === 'calendar' ? 'active-btn' : ''}`} 
+            onClick={() => setActiveTab('calendar')}
+          >
+            <span className="btn-icon">▦</span> Calendar View 
+          </button>
+          
+          <button 
+            className={`black-icon-btn ${activeTab === 'tool' ? 'active-btn' : ''}`} 
+            onClick={() => setActiveTab('tool')}
+          >
+            <span className="btn-icon">⊞</span> Campaign View
+          </button>
+        </div>
+      </nav>
+    </>
   );
 }
