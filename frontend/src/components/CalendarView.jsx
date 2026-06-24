@@ -179,7 +179,8 @@ export default function CalendarView({ campaigns, filters, onOpenDetail, canEdit
                             onSave({ ...campaign, start_month: ALL_MONTHS[newSi].k, end_month: ALL_MONTHS[newEi].k, calendar_rows: newRows }, false);
                           } : undefined}
                         >
-                          {canEdit && <div className="cal-add-cell" onClick={() => onOpenForm({ id: null, month: mo.k })}>＋</div>}
+                          {/* PASS THE rowKey HERE SO WE KNOW WHICH ROW WAS CLICKED */}
+                          {canEdit && <div className="cal-add-cell" onClick={() => onOpenForm({ id: null, month: mo.k, rowKey: row.k })}>＋</div>}
                         </td>
                       );
                       mIdx++;
@@ -211,9 +212,9 @@ export default function CalendarView({ campaigns, filters, onOpenDetail, canEdit
                                   fontSize: 10,
                                   fontWeight: 'normal',
                                   fontStyle: 'italic',
-                                  fontFamily: 'serif',      // Makes it look like a classic "i" icon
-                                  textTransform: 'none',    // Overrides the uppercase from .cal-row-label
-                                  cursor: 'pointer',        // Replaces the "?" help cursor with a hand pointer
+                                  fontFamily: 'serif',
+                                  textTransform: 'none',
+                                  cursor: 'pointer',
                                   marginLeft: 4
                                 }}
                               >
@@ -231,6 +232,10 @@ export default function CalendarView({ campaigns, filters, onOpenDetail, canEdit
             })}
           </tbody>
         </table>
+      </div>
+      <div className="cal-legend">
+        <div className="spacer"></div>
+        <span style={{ fontSize: 8, color: '#1E293B' }}>budmp_sbfo_dev.data_science.{market.toLowerCase()}_iap_calendar</span>
       </div>
     </div>
   );

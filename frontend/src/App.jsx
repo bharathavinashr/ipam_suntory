@@ -18,6 +18,7 @@ export default function App() {
   const [detailCampaign, setDetailCampaign] = useState(null);
   const [formCampaignId, setFormCampaignId] = useState(undefined);   // undefined=closed, null=new, string=edit
   const [formDefaultMonth, setFormDefaultMonth] = useState(null);
+  const [formDefaultRow, setFormDefaultRow] = useState(null); // Added state to track the clicked row
 
   useEffect(() => {
     api.getCampaigns()
@@ -27,7 +28,10 @@ export default function App() {
 
   useEffect(() => {
     const handler = (e) => {
-      if (e.key === 'Escape') { setDetailCampaign(null); setFormCampaignId(undefined); }
+      if (e.key === 'Escape') { 
+        setDetailCampaign(null); 
+        setFormCampaignId(undefined); 
+      }
     };
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
@@ -41,7 +45,6 @@ export default function App() {
     const custAll = custArr.includes('All') || custArr.length === 0;
   
     return campaigns.filter(c => {
-      // Check for AU & NZ dynamically
       if (filters.org !== 'AU & NZ' && c.market?.toUpperCase() !== market) return false;
       if (filters.category !== 'All' && c.category !== filters.category) return false;
       if (!brandAll && !brandArr.includes(c.brand)) return false;
@@ -67,7 +70,6 @@ export default function App() {
 
   return (
     <div id="app">
-      {/* 1. canEdit and setCanEdit removed from TopNav */}
       <TopNav 
         activeTab={activeTab} 
         setActiveTab={setActiveTab}
@@ -75,7 +77,6 @@ export default function App() {
         setDnOpen={setDnOpen} 
       />
 
-      {/* 2. canEdit and setCanEdit added to FilterBar */}
       <FilterBar 
         filters={filters} 
         setFilters={setFilters} 
@@ -88,8 +89,15 @@ export default function App() {
           ? <CalendarView campaigns={filteredCampaigns} filters={filters}
               onOpenDetail={setDetailCampaign}
               onOpenForm={v => {
-                if (v && typeof v === 'object') { setFormCampaignId(v.id); setFormDefaultMonth(v.month); }
-                else { setFormCampaignId(v); setFormDefaultMonth(null); }
+                if (v && typeof v === 'object') { 
+                  setFormCampaignId(v.id); 
+                  setFormDefaultMonth(v.month);
+                  setFormDefaultRow(v.rowKey); // Store row on open
+                } else { 
+                  setFormCampaignId(v); 
+                  setFormDefaultMonth(null); 
+                  setFormDefaultRow(null); 
+                }
               }}
               onSave={handleSave}
               canEdit={canEdit} />
@@ -104,8 +112,18 @@ export default function App() {
       )}
 
       {formCampaignId !== undefined && (
-        <FormModal campaignId={formCampaignId} campaigns={campaigns} defaultMonth={formDefaultMonth}
-          onClose={() => { setFormCampaignId(undefined); setFormDefaultMonth(null); }} onSave={handleSave} />
+        <FormModal 
+          campaignId={formCampaignId} 
+          campaigns={campaigns} 
+          defaultMonth={formDefaultMonth}
+          defaultRow={formDefaultRow} // Pass row to FormModal
+          onClose={() => { 
+            setFormCampaignId(undefined); 
+            setFormDefaultMonth(null); 
+            setFormDefaultRow(null); 
+          }} 
+          onSave={handleSave} 
+        />
       )}
 
       {dnOpen
