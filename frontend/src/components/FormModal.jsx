@@ -66,6 +66,8 @@ export default function FormModal({ campaignId, campaigns, onClose, onSave, defa
     return {
       ...DEFAULT,
       ...ext,
+      start_date: ext.start_date || getDefaultDate(ext.start_month) || '',
+      end_date: ext.end_date || getDefaultDate(ext.end_month) || '',
       milestones: ext.milestones?.length ? ext.milestones : DEFAULT_MILESTONES,
       tags_str: ext.tags?.join(', ') || ''
     };
