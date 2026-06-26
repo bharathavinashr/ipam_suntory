@@ -10,23 +10,23 @@ export const BRAND_CFG = {
   "V Energy":           { bg:"#0ECC73", bdr:"#0ECC73", txt:"#000", dot:"#0ECC73" },
   "Suntory BOSS Coffee":{ bg:"#004A79", bdr:"#004A79", txt:"#FFFFFF", dot:"#004A79" },
   "Ribena":             { bg:"#00325D", bdr:"#00325D", txt:"#FFFFFF", dot:"#00325D" },
-  "Celsius":            { bg:"#666B6E", bdr:"#666B6E", txt:"#FFFFFF", dot:"#666B6E" },
-  "Pepsi":              { bg:"#3E3A39", bdr:"#3E3A39", txt:"#FFFFFF", dot:"#3E3A39" },
+  "Celsius":            { bg:"#18E3D3", bdr:"#18E3D3", txt:"#000", dot:"#18E3D3" },
+  "Pepsi":              { bg:"#18E3D3", bdr:"#18E3D3", txt:"#000", dot:"#18E3D3" },
   
   // 50% Tint/Opacity Colors (80 hex)
   "Gatorade":           { bg:"#4AD996", bdr:"#4AD996", txt:"#000", dot:"#4AD996" },
   "UP&GO":              { bg:"#004A7980", bdr:"#004A7980", txt:"#FFFFFF", dot:"#004A79" },
-  "Suntory -196":       { bg:"#00325D80", bdr:"#00325D80", txt:"#FFFFFF", dot:"#00325D" },
+  "Suntory -196":       { bg:"#52EBDE", bdr:"#52EBDE", txt:"#000", dot:"#52EBDE" },
   "Jim Beam":           { bg:"#666B6E80", bdr:"#666B6E80", txt:"#FFFFFF", dot:"#666B6E" },
-  "Canadian Club":      { bg:"#3E3A3980", bdr:"#3E3A3980", txt:"#FFFFFF", dot:"#3E3A39" },
+  "Canadian Club":      { bg:"#52EBDE", bdr:"#52EBDE", txt:"#000", dot:"#52EBDE" },
 
   // 25% Tint/Opacity Colors (40 hex)
   "Yamazaki":           { bg:"#87E6B9", bdr:"#87E6B9", txt:"#000", dot:"#87E6B9" },
-  "Roku":               { bg:"#004A7940", bdr:"#004A7940", txt:"#FFFFFF", dot:"#004A79" },
-  "Maximus":            { bg:"#00325D40", bdr:"#00325D40", txt:"#FFFFFF", dot:"#00325D" },
+  "Roku":               { bg:"#8CF2E9", bdr:"#8CF2E9", txt:"#000", dot:"#8CF2E9" },
+  "Maximus":            { bg:"#8CF2E9", bdr:"#0038CF2E925D40", txt:"#000", dot:"#8CF2E9" },
   
   // Default Fallback
-  "default":            { bg:"#666B6E40", bdr:"#666B6E40", txt:"#FFFFFF", dot:"#666B6E" },
+  "default":            { bg:"#C5F8F4", bdr:"#C5F8F4", txt:"#FFFFFF", dot:"#C5F8F4" },
 };
 
 export const TIERS = {

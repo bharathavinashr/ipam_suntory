@@ -53,6 +53,15 @@ export default function App() {
     });
   }, [campaigns, filters]);
 
+  const handleDelete = async (id) => {
+    try {
+      await api.deleteCampaign(id);
+      setCampaigns(prev => prev.filter(c => c.id !== id));
+    } catch (err) {
+      console.error('Delete failed', err);
+    }
+  };
+
   const handleSave = async (payload, isNew) => {
     try {
       if (isNew) {
@@ -108,7 +117,7 @@ export default function App() {
 
       {detailCampaign && (
         <DetailModal campaign={detailCampaign} onClose={() => setDetailCampaign(null)}
-          onEdit={(id) => setFormCampaignId(id)} canEdit={canEdit} />
+          onEdit={(id) => setFormCampaignId(id)} onDelete={handleDelete} canEdit={canEdit} />
       )}
 
       {formCampaignId !== undefined && (

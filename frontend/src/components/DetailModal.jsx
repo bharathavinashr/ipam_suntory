@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { TIERS, PERSONAS, bc, tierAcc, fmt } from '../constants';
 import { StatusBadge, TierBadge, BrandBadge } from './Badges';
 
-export default function DetailModal({ campaign: c, onClose, onEdit, canEdit }) {
+export default function DetailModal({ campaign: c, onClose, onEdit, onDelete, canEdit }) {
   const [tab, setTab] = useState('overview');
   if (!c) return null;
 
@@ -22,8 +22,12 @@ export default function DetailModal({ campaign: c, onClose, onEdit, canEdit }) {
         <div className="detail-header" style={{ background: `linear-gradient(135deg,${bcfg.bg}50,transparent 60%)` }}>
           <div className="detail-close">
             {canEdit && (
-              <button className="close-btn" style={{ background:'#1E3A5F', border:'1px solid #1D4ED8', color:'#60A5FA', width:'auto', padding:'0 13px', fontSize:11, fontWeight:700 }}
-                onClick={() => { onEdit(c.id); onClose(); }}>✏️ Edit</button>
+              <>
+                <button className="close-btn" style={{ background:'#1E3A5F', border:'1px solid #1D4ED8', color:'#60A5FA', width:'auto', padding:'0 13px', fontSize:11, fontWeight:700 }}
+                  onClick={() => { onEdit(c.id); onClose(); }}>✏️ Edit</button>
+                <button className="close-btn" style={{ background:'#3B0A0A', border:'1px solid #7F1D1D', color:'#FCA5A5', width:'auto', padding:'0 13px', fontSize:11, fontWeight:700 }}
+                  onClick={() => { onDelete(c.id); onClose(); }}>🗑️ Delete</button>
+              </>
             )}
             <button className="close-btn" onClick={onClose}>✕</button>
           </div>
