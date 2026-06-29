@@ -12,9 +12,9 @@ const DEFAULT_MILESTONES = [
 ];
 
 const DEFAULT = {
-  name:'', brand:'V Energy', type:'NPD', tier:'Platinum', status:'Draft',
-  channel:'Grocery', customer:'Woolworths Supermarket', market:'AU', category:'Non-Alc',
-  calendar_rows:['NPD1'], start_date:'', end_date:'', budget:0, store_targets:0,
+  name:'', brand:'', type:'', tier:'', status:'',
+  channel:'', customer:'', market:'', category:'',
+  calendar_rows:['NPD1'], start_date:'', end_date:'', first_order_date:'', last_order_date:'', budget:0, store_targets:0,
   objective:'', success_criteria:'', notes:'', tags:[], personas:[],
   milestones: DEFAULT_MILESTONES, review_due: '', reviewed: false, review_score: 0,
 };
@@ -173,41 +173,49 @@ export default function FormModal({ campaignId, campaigns, onClose, onSave, defa
               <div className="form-row">
                 <Field label="Market">
                   <select value={form.market} onChange={e => handleCatMarket('market', e.target.value)}>
+                    <option value="">-- Select --</option>
                     {['AU','NZ'].map(v => <option key={v}>{v}</option>)}
                   </select>
                 </Field>
                 <Field label="Category">
                   <select value={form.category} onChange={e => handleCatMarket('category', e.target.value)}>
+                    <option value="">-- Select --</option>
                     {['Non-Alc','Alc'].map(v => <option key={v}>{v}</option>)}
                   </select>
                 </Field>
                 <Field label="Brand">
                   <select value={form.brand} onChange={e => set('brand', e.target.value)}>
+                    <option value="">-- Select --</option>
                     {bList.map(b => <option key={b}>{b}</option>)}
                   </select>
                 </Field>
                 <Field label="Type">
                   <select value={form.type} onChange={e => set('type', e.target.value)}>
+                    <option value="">-- Select --</option>
                     {['NPD','Campaign','Promotion','Retailer Programme'].map(v => <option key={v}>{v}</option>)}
                   </select>
                 </Field>
                 <Field label="Tier">
                   <select value={form.tier} onChange={e => set('tier', e.target.value)}>
+                    <option value="">-- Select --</option>
                     {Object.keys(TIERS).map(v => <option key={v}>{v}</option>)}
                   </select>
                 </Field>
                 <Field label="Status">
                   <select value={form.status} onChange={e => set('status', e.target.value)}>
+                    <option value="">-- Select --</option>
                     {Object.keys(STATUS_COL).map(v => <option key={v}>{v}</option>)}
                   </select>
                 </Field>
                 <Field label="Channel">
                   <select value={form.channel} onChange={e => set('channel', e.target.value)}>
+                    <option value="">-- Select --</option>
                     {['Grocery','P&C','Route','All Channels'].map(v => <option key={v}>{v}</option>)}
                   </select>
                 </Field>
                 <Field label="Customer">
                   <select value={form.customer} onChange={e => set('customer', e.target.value)}>
+                    <option value="">-- Select --</option>
                     {cList.map(v => <option key={v}>{v}</option>)}
                   </select>
                 </Field>
@@ -216,6 +224,12 @@ export default function FormModal({ campaignId, campaigns, onClose, onSave, defa
                 </Field>
                 <Field label="End Date">
                   <input type="date" value={form.end_date} onChange={e => set('end_date', e.target.value)} />
+                </Field>
+                <Field label="First Order Date">
+                  <input type="date" value={form.first_order_date || ''} onChange={e => set('first_order_date', e.target.value)} />
+                </Field>
+                <Field label="Last Order Date">
+                  <input type="date" value={form.last_order_date || ''} onChange={e => set('last_order_date', e.target.value)} />
                 </Field>
                 <Field label="Budget ($)">
                   <input type="number" value={form.budget} onChange={e => set('budget', +e.target.value)} />

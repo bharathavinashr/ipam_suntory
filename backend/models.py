@@ -20,6 +20,8 @@ class Campaign(Base):
     calendar_rows = Column(JSON, default=list)
     fo_date = Column(String, default="")
     ld_date = Column(String, default="")
+    first_order_date = Column(String, default="")
+    last_order_date = Column(String, default="")
     budget = Column(Integer, default=0)
     store_targets = Column(Integer, default=0)
     objective = Column(Text, default="")

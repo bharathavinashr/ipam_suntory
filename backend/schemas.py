@@ -23,6 +23,8 @@ class CampaignBase(BaseModel):
     calendar_rows: List[str] = []
     fo_date: str = ""
     ld_date: str = ""
+    first_order_date: str = ""
+    last_order_date: str = ""
     budget: int = 0
     store_targets: int = 0
     objective: str = ""
