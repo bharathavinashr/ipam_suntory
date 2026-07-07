@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { BRANDS_AU_NONALC, BRANDS_AU_ALC, BRANDS_NZ_NONALC, BRANDS_NZ_ALC,
   CUSTS_NONALC, CUSTS_ALC, TIERS, STATUS_COL, PERSONAS, ALL_ROWS, bc } from '../constants';
+import { lookupApi } from '../api';
 
 const DEFAULT_MILESTONES = [
   { l:'Brief to Agency', d:'', done:false },
@@ -66,6 +67,8 @@ export default function FormModal({ campaignId, campaigns, onClose, onSave, defa
     return {
       ...DEFAULT,
       ...ext,
+      division:   ext.ro_division || ext.division || '',
+      ro_country: ext.ro_country || '',
       start_date: ext.start_date || getDefaultDate(ext.start_month) || '',
       end_date: ext.end_date || getDefaultDate(ext.end_month) || '',
       milestones: ext.milestones?.length ? ext.milestones : DEFAULT_MILESTONES,
@@ -74,9 +77,23 @@ export default function FormModal({ campaignId, campaigns, onClose, onSave, defa
   };
 
   const [form, setForm] = useState(() => getInitialState(existing, defaultMonth, defaultRow));
+  const restoringRef = useRef(false);
+
+  const [attachments, setAttachments] = useState(() => existing?.attachments || []);
+  const [links, setLinks] = useState(() => existing?.links || []);
+  const [linkInput, setLinkInput] = useState({ label: '', url: '' });
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
+    restoringRef.current = true;
     setForm(getInitialState(existing, defaultMonth, defaultRow));
+    setSelChannels(toSelMap(existing?.ro_channels));
+    setSelSubChannels(toSelMap(existing?.ro_subchannels));
+    setSelAccounts(toSelMap(existing?.ro_accounts));
+    setSelBrands(toSelMap(existing?.ro_brands));
+    setSelBrandFamilies(toSelMap(existing?.ro_brand_families));
+    setAttachments(existing?.attachments || []);
+    setLinks(existing?.links || []);
   }, [campaignId, defaultMonth, defaultRow, existing]);
 
   const isNew = !existing;
@@ -86,6 +103,156 @@ export default function FormModal({ campaignId, campaigns, onClose, onSave, defa
   const cList = form.category === 'Alc' ? CUSTS_ALC : CUSTS_NONALC;
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  // ── Lookup state ──────────────────────────────────────────────────────────
+  const [divisionOpts, setDivisionOpts] = useState([]);
+  const [countryOpts, setCountryOpts]   = useState([]);
+  const [channelOpts, setChannelOpts]   = useState([]);
+  const [subChannelOpts, setSubChannelOpts] = useState([]);
+  const [accountOpts, setAccountOpts]   = useState([]);
+  const [brandOpts, setBrandOpts]       = useState([]);
+  const [brandFamilyOpts, setBrandFamilyOpts] = useState([]);
+
+  // multi-select state: { code: name } — restored from existing campaign
+  const toSelMap = (arr) => Array.isArray(arr) ? Object.fromEntries(arr.map(o => [o.value, o.label])) : {};
+  const [selChannels, setSelChannels]       = useState(() => toSelMap(existing?.ro_channels));
+  const [selSubChannels, setSelSubChannels] = useState(() => toSelMap(existing?.ro_subchannels));
+  const [selAccounts, setSelAccounts]       = useState(() => toSelMap(existing?.ro_accounts));
+  const [selBrands, setSelBrands]           = useState(() => toSelMap(existing?.ro_brands));
+  const [selBrandFamilies, setSelBrandFamilies] = useState(() => toSelMap(existing?.ro_brand_families));
+
+  // dropdown open state
+  const [channelOpen, setChannelOpen]           = useState(false);
+  const [subChannelOpen, setSubChannelOpen]     = useState(false);
+  const [accountOpen, setAccountOpen]           = useState(false);
+  const [brandOpen, setBrandOpen]               = useState(false);
+  const [brandFamilyOpen, setBrandFamilyOpen]   = useState(false);
+
+  // search state
+  const [channelSearch, setChannelSearch]           = useState('');
+  const [subChannelSearch, setSubChannelSearch]     = useState('');
+  const [accountSearch, setAccountSearch]           = useState('');
+  const [brandSearch, setBrandSearch]               = useState('');
+  const [brandFamilySearch, setBrandFamilySearch]   = useState('');
+
+  const channelRef    = useRef(null);
+  const subChRef      = useRef(null);
+  const accountRef    = useRef(null);
+  const brandRef      = useRef(null);
+  const brandFamRef   = useRef(null);
+
+  // Close dropdowns on outside click
+  useEffect(() => {
+    const handler = (e) => {
+      if (channelRef.current && !channelRef.current.contains(e.target)) setChannelOpen(false);
+      if (subChRef.current && !subChRef.current.contains(e.target)) setSubChannelOpen(false);
+      if (accountRef.current && !accountRef.current.contains(e.target)) setAccountOpen(false);
+      if (brandRef.current && !brandRef.current.contains(e.target)) setBrandOpen(false);
+      if (brandFamRef.current && !brandFamRef.current.contains(e.target)) setBrandFamilyOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  // Load divisions on mount
+  useEffect(() => {
+    lookupApi.getDivisions()
+      .then(d => setDivisionOpts(d.options || []))
+      .catch(() => setDivisionOpts([]));
+  }, []);
+
+  // Load countries when division changes
+  useEffect(() => {
+    const division = form.division;
+    if (!division) {
+      setCountryOpts([]);
+      if (!restoringRef.current) setForm(f => ({ ...f, ro_country: '' }));
+      restoringRef.current = false;
+      return;
+    }
+    lookupApi.getCountries(division)
+      .then(d => { setCountryOpts(d.options || []); restoringRef.current = false; })
+      .catch(() => { setCountryOpts([]); restoringRef.current = false; });
+  }, [form.division]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Load channels + all accounts when country changes; reset selections only if user changed it
+  useEffect(() => {
+    const country = form.ro_country;
+    if (!country) {
+      setChannelOpts([]); setSubChannelOpts([]); setAccountOpts([]);
+      if (!restoringRef.current) { setSelChannels({}); setSelSubChannels({}); setSelAccounts({}); }
+      return;
+    }
+    const restoring = restoringRef.current;
+    lookupApi.getChannels(country)
+      .then(d => setChannelOpts(d.options || []))
+      .catch(() => setChannelOpts([]));
+    lookupApi.getAccounts(country)
+      .then(d => setAccountOpts(d.options || []))
+      .catch(() => setAccountOpts([]));
+    if (!restoring) { setSelChannels({}); setSelSubChannels({}); setSelAccounts({}); }
+  }, [form.ro_country]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Load brands when division + country are both set; reset brand selections only if user changed it
+  useEffect(() => {
+    const { division, ro_country } = form;
+    if (!division || !ro_country) {
+      setBrandOpts([]); setBrandFamilyOpts([]);
+      if (!restoringRef.current) { setSelBrands({}); setSelBrandFamilies({}); }
+      return;
+    }
+    const restoring = restoringRef.current;
+    lookupApi.getBrands(division, ro_country)
+      .then(d => setBrandOpts(d.options || []))
+      .catch(() => setBrandOpts([]));
+    if (!restoring) { setSelBrands({}); setSelBrandFamilies({}); }
+  }, [form.division, form.ro_country]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Load subchannels filtered by selected channels
+  useEffect(() => {
+    const country = form.ro_country;
+    if (!country) { setSubChannelOpts([]); return; }
+    const codes = Object.keys(selChannels);
+    if (!codes.length) {
+      lookupApi.getSubchannels(country)
+        .then(d => setSubChannelOpts(d.options || []))
+        .catch(() => setSubChannelOpts([]));
+      return;
+    }
+    Promise.all(codes.map(c => lookupApi.getSubchannels(country, c)))
+      .then(results => {
+        const map = new Map();
+        results.forEach(r => (r.options || []).forEach(o => map.set(o.value, o)));
+        setSubChannelOpts(Array.from(map.values()));
+      })
+      .catch(() => setSubChannelOpts([]));
+  }, [selChannels, form.ro_country]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Load brand families filtered by selected brands
+  useEffect(() => {
+    const { division, ro_country } = form;
+    if (!division || !ro_country) { setBrandFamilyOpts([]); return; }
+    const codes = Object.keys(selBrands);
+    lookupApi.getBrandFamilies(division, ro_country, codes)
+      .then(d => setBrandFamilyOpts(d.options || []))
+      .catch(() => setBrandFamilyOpts([]));
+  }, [selBrands, form.division, form.ro_country]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Multi-select toggle helpers ───────────────────────────────────────────
+  const toggleItem = (setter, code, name) =>
+    setter(prev => { const n = { ...prev }; n[code] ? delete n[code] : (n[code] = name); return n; });
+
+  const toggleAll = (setter, opts, current) =>
+    setter(Object.keys(current).length === opts.length ? {} : Object.fromEntries(opts.map(o => [o.value, o.label])));
+
+  const multiLabel = (sel, placeholder) => {
+    const vals = Object.values(sel);
+    return vals.length ? vals.join(', ') : placeholder;
+  };
+
+  const filtered = (opts, search) =>
+    opts.filter(o => o.label.toLowerCase().includes(search.toLowerCase()));
+
   
   const handleCatMarket = (key, val) => {
     setForm(f => {
@@ -116,21 +283,50 @@ export default function FormModal({ campaignId, campaigns, onClose, onSave, defa
   const handleSave = () => {
     if (!form.name.trim() || isDateInvalid) return;
 
-    const s_month = form.start_date ? getMonthKey(form.start_date) : form.start_month;
-    const e_month = form.end_date ? getMonthKey(form.end_date) : form.end_month;
+    const s_month = form.start_date ? getMonthKey(form.start_date) : (form.start_month || '');
+    const e_month = form.end_date ? getMonthKey(form.end_date) : (form.end_month || '');
 
     const payload = {
-      ...form,
-      start_month: s_month,
-      end_month: e_month,
-      tags: form.tags_str ? form.tags_str.split(',').map(s => s.trim()).filter(Boolean) : [],
-      images: existing?.images || [],
+      name:             form.name,
+      brand:            form.brand            || '',
+      type:             form.type             || '',
+      tier:             form.tier             || '',
+      status:           form.status           || '',
+      channel:          form.channel          || '',
+      customer:         form.customer         || '',
+      market:           form.market           || '',
+      category:         form.category         || '',
+      start_month:      s_month,
+      end_month:        e_month,
+      calendar_rows:    form.calendar_rows    || [],
+      fo_date:          form.fo_date          || '',
+      ld_date:          form.ld_date          || '',
+      first_order_date: form.first_order_date || '',
+      last_order_date:  form.last_order_date  || '',
+      budget:           form.budget           || 0,
+      store_targets:    form.store_targets    || 0,
+      objective:        form.objective        || '',
+      success_criteria: form.success_criteria || '',
+      notes:            form.notes            || '',
+      tags:             form.tags_str ? form.tags_str.split(',').map(s => s.trim()).filter(Boolean) : [],
+      personas:         form.personas         || [],
+      images:           existing?.images      || [],
+      milestones:       form.milestones       || [],
+      review_due:       form.review_due       || '',
+      reviewed:         form.reviewed         || false,
+      review_score:     form.review_score     || null,
+      ro_division:      form.division         || '',
+      ro_country:       form.ro_country       || '',
+      ro_channels:      Object.entries(selChannels).map(([value, label]) => ({ value, label })),
+      ro_subchannels:   Object.entries(selSubChannels).map(([value, label]) => ({ value, label })),
+      ro_accounts:      Object.entries(selAccounts).map(([value, label]) => ({ value, label })),
+      ro_brands:        Object.entries(selBrands).map(([value, label]) => ({ value, label })),
+      ro_brand_families: Object.entries(selBrandFamilies).map(([value, label]) => ({ value, label })),
+      attachments,
+      links,
     };
 
-    // Cleanup temporary UI fields
-    delete payload.tags_str;
-
-    onSave(payload, isNew);
+    onSave(payload, isNew, campaignId);
   };
 
   const bcfg = bc(form.brand);
@@ -219,6 +415,130 @@ export default function FormModal({ campaignId, campaigns, onClose, onSave, defa
                     {cList.map(v => <option key={v}>{v}</option>)}
                   </select>
                 </Field>
+              </div>
+
+              {/* ── RO Lookup Fields ── */}
+              <div className="form-row">
+                <Field label="Division">
+                  <select value={form.division || ''} onChange={e => { restoringRef.current = false; set('division', e.target.value); }}>
+                    <option value="">-- Select --</option>
+                    {divisionOpts.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                  </select>
+                </Field>
+                <Field label="Country">
+                  <select value={form.ro_country || ''} onChange={e => { restoringRef.current = false; set('ro_country', e.target.value); }} disabled={!form.division}>
+                    <option value="">-- Select --</option>
+                    {countryOpts.map(o => <option key={o.value} value={o.label}>{o.label}</option>)}
+                  </select>
+                </Field>
+
+                <div className="field" ref={channelRef}>
+                  <label>Channel</label>
+                  <div className="multi-combo" onClick={() => form.ro_country && setChannelOpen(o => !o)}>
+                    <span className={Object.keys(selChannels).length ? '' : 'placeholder'}>{multiLabel(selChannels, 'Select channels')}</span>
+                    <span className="combo-arrow">&#9662;</span>
+                  </div>
+                  {channelOpen && (
+                    <div className="combo-dropdown">
+                      <input className="combo-search" placeholder="Search..." value={channelSearch} onChange={e => setChannelSearch(e.target.value)} onClick={e => e.stopPropagation()} />
+                      <label className="combo-item combo-select-all">
+                        <input type="checkbox" checked={channelOpts.length > 0 && Object.keys(selChannels).length === channelOpts.length} onChange={() => toggleAll(setSelChannels, channelOpts, selChannels)} /> Select All
+                      </label>
+                      {filtered(channelOpts, channelSearch).map(o => (
+                        <label key={o.value} className="combo-item">
+                          <input type="checkbox" checked={!!selChannels[o.value]} onChange={() => toggleItem(setSelChannels, o.value, o.label)} /> {o.label}
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="field" ref={subChRef}>
+                  <label>Sub Channel</label>
+                  <div className="multi-combo" onClick={() => form.ro_country && setSubChannelOpen(o => !o)}>
+                    <span className={Object.keys(selSubChannels).length ? '' : 'placeholder'}>{multiLabel(selSubChannels, 'Select sub-channels')}</span>
+                    <span className="combo-arrow">&#9662;</span>
+                  </div>
+                  {subChannelOpen && (
+                    <div className="combo-dropdown">
+                      <input className="combo-search" placeholder="Search..." value={subChannelSearch} onChange={e => setSubChannelSearch(e.target.value)} onClick={e => e.stopPropagation()} />
+                      <label className="combo-item combo-select-all">
+                        <input type="checkbox" checked={subChannelOpts.length > 0 && Object.keys(selSubChannels).length === subChannelOpts.length} onChange={() => toggleAll(setSelSubChannels, subChannelOpts, selSubChannels)} /> Select All
+                      </label>
+                      {filtered(subChannelOpts, subChannelSearch).map(o => (
+                        <label key={o.value} className="combo-item">
+                          <input type="checkbox" checked={!!selSubChannels[o.value]} onChange={() => toggleItem(setSelSubChannels, o.value, o.label)} /> {o.label}
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="field" ref={accountRef}>
+                  <label>Account</label>
+                  <div className="multi-combo" onClick={() => form.ro_country && setAccountOpen(o => !o)}>
+                    <span className={Object.keys(selAccounts).length ? '' : 'placeholder'}>{multiLabel(selAccounts, 'Select accounts')}</span>
+                    <span className="combo-arrow">&#9662;</span>
+                  </div>
+                  {accountOpen && (
+                    <div className="combo-dropdown">
+                      <input className="combo-search" placeholder="Search..." value={accountSearch} onChange={e => setAccountSearch(e.target.value)} onClick={e => e.stopPropagation()} />
+                      <label className="combo-item combo-select-all">
+                        <input type="checkbox" checked={accountOpts.length > 0 && Object.keys(selAccounts).length === accountOpts.length} onChange={() => toggleAll(setSelAccounts, accountOpts, selAccounts)} /> Select All
+                      </label>
+                      {filtered(accountOpts, accountSearch).map(o => (
+                        <label key={o.value} className="combo-item">
+                          <input type="checkbox" checked={!!selAccounts[o.value]} onChange={() => toggleItem(setSelAccounts, o.value, o.label)} /> {o.label}
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="field" ref={brandRef}>
+                  <label>Brand</label>
+                  <div className="multi-combo" onClick={() => (form.division && form.ro_country) && setBrandOpen(o => !o)}>
+                    <span className={Object.keys(selBrands).length ? '' : 'placeholder'}>{multiLabel(selBrands, 'Select brands')}</span>
+                    <span className="combo-arrow">&#9662;</span>
+                  </div>
+                  {brandOpen && (
+                    <div className="combo-dropdown">
+                      <input className="combo-search" placeholder="Search..." value={brandSearch} onChange={e => setBrandSearch(e.target.value)} onClick={e => e.stopPropagation()} />
+                      <label className="combo-item combo-select-all">
+                        <input type="checkbox" checked={brandOpts.length > 0 && Object.keys(selBrands).length === brandOpts.length} onChange={() => toggleAll(setSelBrands, brandOpts, selBrands)} /> Select All
+                      </label>
+                      {filtered(brandOpts, brandSearch).map(o => (
+                        <label key={o.value} className="combo-item">
+                          <input type="checkbox" checked={!!selBrands[o.value]} onChange={() => toggleItem(setSelBrands, o.value, o.label)} /> {o.label}
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="field" ref={brandFamRef}>
+                  <label>Brand Family</label>
+                  <div className="multi-combo" onClick={() => (form.division && form.ro_country) && setBrandFamilyOpen(o => !o)}>
+                    <span className={Object.keys(selBrandFamilies).length ? '' : 'placeholder'}>{multiLabel(selBrandFamilies, 'Select brand families')}</span>
+                    <span className="combo-arrow">&#9662;</span>
+                  </div>
+                  {brandFamilyOpen && (
+                    <div className="combo-dropdown">
+                      <input className="combo-search" placeholder="Search..." value={brandFamilySearch} onChange={e => setBrandFamilySearch(e.target.value)} onClick={e => e.stopPropagation()} />
+                      <label className="combo-item combo-select-all">
+                        <input type="checkbox" checked={brandFamilyOpts.length > 0 && Object.keys(selBrandFamilies).length === brandFamilyOpts.length} onChange={() => toggleAll(setSelBrandFamilies, brandFamilyOpts, selBrandFamilies)} /> Select All
+                      </label>
+                      {filtered(brandFamilyOpts, brandFamilySearch).map(o => (
+                        <label key={o.value} className="combo-item">
+                          <input type="checkbox" checked={!!selBrandFamilies[o.value]} onChange={() => toggleItem(setSelBrandFamilies, o.value, o.label)} /> {o.label}
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="form-row">
                 <Field label="Start Date">
                   <input type="date" value={form.start_date} onChange={e => set('start_date', e.target.value)} />
                 </Field>
@@ -284,6 +604,69 @@ export default function FormModal({ campaignId, campaigns, onClose, onSave, defa
                     </button>
                   ))}
                 </div>
+              </div>
+
+              {/* ── Attachments ── */}
+              <div className="field">
+                <label>Attachments</label>
+                <div className="attach-zone" onClick={() => fileInputRef.current.click()}>
+                  <span>📎 Click to upload — images, PDF, PPT, Word</span>
+                  <input ref={fileInputRef} type="file" multiple accept="image/*,.pdf,.ppt,.pptx,.doc,.docx" style={{ display:'none' }}
+                    onChange={e => {
+                      const files = Array.from(e.target.files);
+                      files.forEach(file => {
+                        const reader = new FileReader();
+                        reader.onload = ev => setAttachments(prev => [...prev, {
+                          name: file.name,
+                          type: file.type,
+                          size: file.size,
+                          data: ev.target.result,
+                        }]);
+                        reader.readAsDataURL(file);
+                      });
+                      e.target.value = '';
+                    }}
+                  />
+                </div>
+                {attachments.length > 0 && (
+                  <div className="attach-list">
+                    {attachments.map((f, i) => (
+                      <div key={i} className="attach-item">
+                        <span className="attach-icon">{f.type?.startsWith('image/') ? '🖼️' : f.type?.includes('pdf') ? '📄' : f.type?.includes('presentation') || f.name?.endsWith('.ppt') || f.name?.endsWith('.pptx') ? '📊' : '📝'}</span>
+                        <a href={f.data} download={f.name} className="attach-name">{f.name}</a>
+                        <span className="attach-size">{f.size ? `${(f.size/1024).toFixed(0)} KB` : ''}</span>
+                        <button type="button" className="attach-remove" onClick={() => setAttachments(prev => prev.filter((_, j) => j !== i))}>✕</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* ── Links ── */}
+              <div className="field">
+                <label>Links</label>
+                <div className="link-add-row">
+                  <input placeholder="Label (e.g. Brief)" value={linkInput.label} onChange={e => setLinkInput(l => ({ ...l, label: e.target.value }))} className="link-input" />
+                  <input placeholder="URL (https://...)" value={linkInput.url} onChange={e => setLinkInput(l => ({ ...l, url: e.target.value }))} className="link-input" />
+                  <button type="button" className="link-add-btn"
+                    disabled={!linkInput.url.trim()}
+                    onClick={() => {
+                      if (!linkInput.url.trim()) return;
+                      setLinks(prev => [...prev, { label: linkInput.label.trim() || linkInput.url.trim(), url: linkInput.url.trim() }]);
+                      setLinkInput({ label: '', url: '' });
+                    }}>+ Add</button>
+                </div>
+                {links.length > 0 && (
+                  <div className="attach-list">
+                    {links.map((lk, i) => (
+                      <div key={i} className="attach-item">
+                        <span className="attach-icon">🔗</span>
+                        <a href={lk.url} target="_blank" rel="noreferrer" className="attach-name">{lk.label}</a>
+                        <button type="button" className="attach-remove" onClick={() => setLinks(prev => prev.filter((_, j) => j !== i))}>✕</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </>
           )}

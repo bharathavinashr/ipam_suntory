@@ -62,13 +62,13 @@ export default function App() {
     }
   };
 
-  const handleSave = async (payload, isNew) => {
+  const handleSave = async (payload, isNew, campaignId) => {
     try {
       if (isNew) {
         const created = await api.createCampaign(payload);
         setCampaigns(prev => [...prev, created]);
       } else {
-        const updated = await api.updateCampaign(payload.id, payload);
+        const updated = await api.updateCampaign(campaignId, payload);
         setCampaigns(prev => prev.map(c => c.id === updated.id ? updated : c));
       }
       setFormCampaignId(undefined);

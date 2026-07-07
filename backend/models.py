@@ -1,6 +1,38 @@
 from sqlalchemy import Column, String, Integer, Boolean, JSON, Text
 from database import Base
 
+SCHEMA = "public"
+
+
+class ROProduct(Base):
+    __tablename__ = "ro_products"
+    __table_args__ = {"schema": SCHEMA}
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    brand_family_code = Column(String(20), nullable=False, index=True)
+    brand_family_name = Column(String(200), nullable=False)
+    brand_code = Column(String(20), nullable=False, index=True)
+    brand_name = Column(String(200), nullable=False)
+    division = Column(String(255), nullable=False, index=True)
+    company_code = Column(String(50), nullable=True)
+    country = Column(String(255), nullable=True, index=True)
+
+
+class ROCustomer(Base):
+    __tablename__ = "ro_customers"
+    __table_args__ = {"schema": SCHEMA}
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    division = Column(String(255), nullable=False, index=True)
+    company_code = Column(String(50), nullable=True)
+    country = Column(String(255), nullable=True, index=True)
+    channel_code = Column(String(50), nullable=False, index=True)
+    channel_name = Column(String(200), nullable=False)
+    subchannel_code = Column(String(50), nullable=False, index=True)
+    subchannel_name = Column(String(200), nullable=False)
+    account_code = Column(String(50), nullable=False, index=True)
+    account_name = Column(String(200), nullable=False)
+
 
 class Campaign(Base):
     __tablename__ = "campaigns"
@@ -34,3 +66,12 @@ class Campaign(Base):
     review_due = Column(String, default="TBC")
     reviewed = Column(Boolean, default=False)
     review_score = Column(Integer, nullable=True)
+    ro_division = Column(String, default="")
+    ro_country = Column(String, default="")
+    ro_channels = Column(JSON, default=list)
+    ro_subchannels = Column(JSON, default=list)
+    ro_accounts = Column(JSON, default=list)
+    ro_brands = Column(JSON, default=list)
+    ro_brand_families = Column(JSON, default=list)
+    attachments = Column(JSON, default=list)
+    links = Column(JSON, default=list)

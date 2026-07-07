@@ -10,16 +10,16 @@ class MilestoneSchema(BaseModel):
 
 class CampaignBase(BaseModel):
     name: str
-    brand: str
-    type: str
-    tier: str
-    status: str
-    channel: str
-    customer: str
-    market: str
-    category: str
-    start_month: str
-    end_month: str
+    brand: str = ""
+    type: str = ""
+    tier: str = ""
+    status: str = ""
+    channel: str = ""
+    customer: str = ""
+    market: str = ""
+    category: str = ""
+    start_month: str = ""
+    end_month: str = ""
     calendar_rows: List[str] = []
     fo_date: str = ""
     ld_date: str = ""
@@ -37,6 +37,15 @@ class CampaignBase(BaseModel):
     review_due: str = "TBC"
     reviewed: bool = False
     review_score: Optional[int] = None
+    ro_division: str = ""
+    ro_country: str = ""
+    ro_channels: List[Any] = []
+    ro_subchannels: List[Any] = []
+    ro_accounts: List[Any] = []
+    ro_brands: List[Any] = []
+    ro_brand_families: List[Any] = []
+    attachments: List[Any] = []
+    links: List[Any] = []
 
 
 class CampaignCreate(CampaignBase):

@@ -1,11 +1,11 @@
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 import uuid
 
 from database import engine, get_db, Base
-from models import Campaign
+from models import Campaign, ROProduct, ROCustomer
 from schemas import CampaignCreate, CampaignUpdate, CampaignResponse
 
 Base.metadata.create_all(bind=engine)
@@ -228,3 +228,133 @@ def delete_campaign(campaign_id: str, db: Session = Depends(get_db)):
     db.delete(c)
     db.commit()
     return {"message": "Deleted"}
+
+
+# ── Lookup endpoints ──────────────────────────────────────────────────────────
+
+@app.get("/api/lookup/divisions")
+def get_divisions(db: Session = Depends(get_db)):
+    rows = db.query(ROProduct.division).distinct().order_by(ROProduct.division).all()
+    return {"options": [{"value": r[0], "label": r[0]} for r in rows]}
+
+
+@app.get("/api/lookup/countries")
+def get_countries(division: str, db: Session = Depends(get_db)):
+    rows = (
+        db.query(ROCustomer.company_code, ROCustomer.country)
+        .filter(ROCustomer.division == division)
+        .distinct()
+        .order_by(ROCustomer.country)
+        .all()
+    )
+    return {"options": [{"value": r[0], "label": r[1]} for r in rows if r[1]]}
+
+
+@app.get("/api/lookup/channels")
+def get_channels(country: str, db: Session = Depends(get_db)):
+    rows = (
+        db.query(ROCustomer.channel_code, ROCustomer.channel_name)
+        .filter(ROCustomer.country == country)
+        .distinct()
+        .order_by(ROCustomer.channel_name)
+        .all()
+    )
+    return {"options": [{"value": r[0], "label": r[1]} for r in rows]}
+
+
+@app.get("/api/lookup/subchannels")
+def get_subchannels(country: str, channel_code: Optional[str] = None, db: Session = Depends(get_db)):
+    query = db.query(ROCustomer.subchannel_code, ROCustomer.subchannel_name).filter(
+        ROCustomer.country == country
+    )
+    if channel_code:
+        query = query.filter(ROCustomer.channel_code == channel_code)
+    rows = query.distinct().order_by(ROCustomer.subchannel_name).all()
+    return {"options": [{"value": r[0], "label": r[1]} for r in rows]}
+
+
+@app.get("/api/lookup/accounts")
+def get_accounts(country: str, subchannel_code: Optional[str] = None, db: Session = Depends(get_db)):
+    query = db.query(ROCustomer.account_code, ROCustomer.account_name).filter(
+        ROCustomer.country == country
+    )
+    if subchannel_code:
+        query = query.filter(ROCustomer.subchannel_code == subchannel_code)
+    rows = query.distinct().order_by(ROCustomer.account_name).all()
+    return {"options": [{"value": r[0], "label": r[1]} for r in rows]}
+
+
+@app.get("/api/lookup/brands")
+def get_brands(division: str, country: str, db: Session = Depends(get_db)):
+    rows = (
+        db.query(ROProduct.brand_code, ROProduct.brand_name)
+        .filter(ROProduct.division == division, ROProduct.country == country)
+        .distinct()
+        .order_by(ROProduct.brand_name)
+        .all()
+    )
+    return {"options": [{"value": r[0], "label": r[1]} for r in rows]}
+
+
+@app.get("/api/lookup/brand-families")
+def get_brand_families(
+    country: str,
+    division: str,
+    brand_codes: Optional[str] = None,
+    db: Session = Depends(get_db),
+):
+    query = db.query(ROProduct.brand_family_code, ROProduct.brand_family_name).filter(
+        ROProduct.country == country, ROProduct.division == division
+    )
+    if brand_codes:
+        codes = [c.strip() for c in brand_codes.split(",") if c.strip()]
+        if codes:
+            query = query.filter(ROProduct.brand_code.in_(codes))
+    rows = query.distinct().order_by(ROProduct.brand_family_name).all()
+    return {"options": [{"value": r[0], "label": r[1]} for r in rows]}
+
+
+@app.get("/api/lookup/subchannel-details")
+def get_subchannel_details(subchannel_code: str, country: str, db: Session = Depends(get_db)):
+    row = (
+        db.query(ROCustomer.channel_code, ROCustomer.channel_name)
+        .filter(ROCustomer.subchannel_code == subchannel_code, ROCustomer.country == country)
+        .first()
+    )
+    if not row:
+        raise HTTPException(status_code=404, detail="Not found")
+    return {"channel": {"code": row[0], "name": row[1]}}
+
+
+@app.get("/api/lookup/account-details")
+def get_account_details(account_code: str, country: str, db: Session = Depends(get_db)):
+    row = (
+        db.query(
+            ROCustomer.channel_code, ROCustomer.channel_name,
+            ROCustomer.subchannel_code, ROCustomer.subchannel_name,
+        )
+        .filter(ROCustomer.account_code == account_code, ROCustomer.country == country)
+        .first()
+    )
+    if not row:
+        raise HTTPException(status_code=404, detail="Not found")
+    return {
+        "channel": {"code": row[0], "name": row[1]},
+        "subchannel": {"code": row[2], "name": row[3]},
+    }
+
+
+@app.get("/api/lookup/brand-family-details")
+def get_brand_family_details(brand_family_code: str, country: str, division: str, db: Session = Depends(get_db)):
+    row = (
+        db.query(ROProduct.brand_code, ROProduct.brand_name)
+        .filter(
+            ROProduct.brand_family_code == brand_family_code,
+            ROProduct.country == country,
+            ROProduct.division == division,
+        )
+        .first()
+    )
+    if not row:
+        raise HTTPException(status_code=404, detail="Not found")
+    return {"brand": {"code": row[0], "name": row[1]}}
