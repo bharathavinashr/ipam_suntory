@@ -14,7 +14,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('calendar');
   const [canEdit, setCanEdit] = useState(false);
   const [dnOpen, setDnOpen] = useState(false);
-  const [filters, setFilters] = useState({ org:'AU & NZ', category:'All', brand:['All'], customer:['All'] });
+  const [filters, setFilters] = useState({ org:'AU', category:'All', brand:['All'], customer:['All'] });
   const [detailCampaign, setDetailCampaign] = useState(null);
   const [formCampaignId, setFormCampaignId] = useState(undefined);   // undefined=closed, null=new, string=edit
   const [formDefaultMonth, setFormDefaultMonth] = useState(null);
@@ -45,7 +45,7 @@ export default function App() {
     const custAll = custArr.includes('All') || custArr.length === 0;
   
     return campaigns.filter(c => {
-      if (filters.org !== 'AU & NZ' && c.market?.toUpperCase() !== market) return false;
+      if (c.market?.toUpperCase() !== market) return false;
       if (filters.category !== 'All' && c.category !== filters.category) return false;
       if (!brandAll && !brandArr.includes(c.brand)) return false;
       if (!custAll && !custArr.includes(c.customer)) return false;

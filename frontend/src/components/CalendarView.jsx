@@ -1,17 +1,23 @@
 import { useState, useRef } from 'react';
-import { PERIODS, ALL_MONTHS, ROW_GROUPS, TIERS, bc } from '../constants';
+import { PERIODS, ALL_MONTHS, TIERS, bc, getCalendarLeftColumns, getCalendarRowGroups } from '../constants';
 
 export default function CalendarView({ campaigns, filters, onOpenDetail, canEdit, onOpenForm, onSave }) {
   const market = filters.org === 'NZ' ? 'NZ' : 'AU';
+  const leftColumns = getCalendarLeftColumns(market);
+  const leftColumnWidths = market === 'NZ' ? [160, 240] : [160, 240, 240];
+  const leftColumnOffsets = leftColumnWidths.reduce((acc, width, idx) => {
+    if (idx === 0) return [0];
+    return [...acc, acc[idx - 1] + leftColumnWidths[idx - 1]];
+  }, []);
+  const rowGroups = getCalendarRowGroups(market);
   const dragRef = useRef(null);
   const [dropTarget, setDropTarget] = useState(null); // { rowKey, monthKey }
 
   // 1. Calculate lanes for each row.k to allow multiple campaigns to overlap seamlessly
   const rowLanes = {};
-  const groupRowSpans = {};
+  const rowLaneCounts = {};
 
-  ROW_GROUPS.forEach((group, gi) => {
-    let totalLanes = 0;
+  rowGroups.forEach((group) => {
     group.rows.forEach(row => {
       // Find campaigns for this row
       const rowCamps = campaigns.filter(c => Array.isArray(c.calendar_rows) && c.calendar_rows.includes(row.k));
@@ -56,43 +62,92 @@ export default function CalendarView({ campaigns, filters, onOpenDetail, canEdit
       }
 
       rowLanes[row.k] = lanes;
-      totalLanes += lanes.length;
+      rowLaneCounts[row.k] = lanes.length;
     });
-    groupRowSpans[gi] = totalLanes;
   });
+
+  const flattenedRows = rowGroups.flatMap(group => group.rows.map(row => ({ group, row })));
+  const sectionRowSpan = {};
+  const categoryRowSpan = {};
+
+  let index = 0;
+  while (index < flattenedRows.length) {
+    const { group, row } = flattenedRows[index];
+    const sectionKey = row.section || group.sec;
+    let span = 0;
+    let nextIndex = index;
+    while (nextIndex < flattenedRows.length) {
+      const nextRow = flattenedRows[nextIndex].row;
+      const nextSectionKey = nextRow.section || flattenedRows[nextIndex].group.sec;
+      if (nextSectionKey !== sectionKey) break;
+      span += rowLaneCounts[nextRow.k] || 1;
+      nextIndex += 1;
+    }
+    sectionRowSpan[row.k] = span;
+
+    if (market === 'AU') {
+      let categoryIndex = index;
+      while (categoryIndex < nextIndex) {
+        const categoryKey = flattenedRows[categoryIndex].row.categoryOrChannel || '';
+        let categorySpan = 0;
+        let nextCategoryIndex = categoryIndex;
+        while (nextCategoryIndex < nextIndex && (flattenedRows[nextCategoryIndex].row.categoryOrChannel || '') === categoryKey) {
+          categorySpan += rowLaneCounts[flattenedRows[nextCategoryIndex].row.k] || 1;
+          nextCategoryIndex += 1;
+        }
+        categoryRowSpan[flattenedRows[categoryIndex].row.k] = categorySpan;
+        categoryIndex = nextCategoryIndex;
+      }
+    }
+
+    index = nextIndex;
+  }
 
   return (
     <div id="tab-calendar" style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
       <div id="cal-wrap">
         <table className="cal-table">
+          <colgroup>
+            {leftColumnWidths.map((width, idx) => (
+              <col key={`left-col-${idx}`} style={{ width: `${width}px`, minWidth: `${width}px`, maxWidth: `${width}px` }} />
+            ))}
+            {ALL_MONTHS.map(m => (
+              <col key={`month-col-${m.k}`} style={{ width: '72px', minWidth: '72px', maxWidth: '72px' }} />
+            ))}
+          </colgroup>
           <thead>
             <tr>
-              <th className="cal-th-section"></th>
-              <th className="cal-th-section"></th>
+              {leftColumns.map((col, idx) => (
+                <th key={`${col.key}-q`} className="cal-th-section" style={{ position: 'sticky', left: leftColumnOffsets[idx], zIndex: 4 + idx, background: '#f3f4f6', width: leftColumnWidths[idx], minWidth: leftColumnWidths[idx], maxWidth: leftColumnWidths[idx] }}></th>
+              ))}
               {PERIODS.map(p => <th key={p.q} className="cal-th-q" colSpan={p.months.length}>{p.q}</th>)}
             </tr>
             <tr>
-              <th className="cal-th-section">SECTION</th>
-              <th className="cal-th-section">ROW</th>
+              {leftColumns.map((col, idx) => (
+                <th key={`${col.key}-header`} className="cal-th-section" style={{ position: 'sticky', left: leftColumnOffsets[idx], zIndex: 4 + idx, background: '#f3f4f6', width: leftColumnWidths[idx], minWidth: leftColumnWidths[idx], maxWidth: leftColumnWidths[idx] }}>{col.label}</th>
+              ))}
               {ALL_MONTHS.map(m => (
                 <th key={m.k} className="cal-th-month">{m.l}<small>{m.f}</small></th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {ROW_GROUPS.map((group, gi) => {
-              let groupLaneIdx = 0;
-              return group.rows.map((row, ri) => {
+            {rowGroups.map((group) => {
+              return group.rows.map((row, rowIndex) => {
                 const lanes = rowLanes[row.k];
+                const prevRow = group.rows[rowIndex - 1];
+                const sectionKey = row.section || group.sec;
+                const sectionLabelCell = !prevRow || prevRow.section !== row.section ? sectionRowSpan[row.k] : 0;
+                const categoryLabelCell = market === 'AU' && (!prevRow || prevRow.section !== row.section || prevRow.categoryOrChannel !== row.categoryOrChannel)
+                  ? categoryRowSpan[row.k] || 0
+                  : 0;
                 
                 // Determine if this row corresponds to a Tier to show the weight tooltip
                 const tierKey = Object.keys(TIERS).find(k => k.toUpperCase() === row.k.toUpperCase());
                 const tierConfig = tierKey ? TIERS[tierKey] : null;
 
                 return lanes.map((lane, li) => {
-                  const isFirstInGroup = groupLaneIdx === 0;
-                  const isFirstInRow = li === 0;
-                  groupLaneIdx++;
+                  const isPrimaryLane = li === 0;
 
                   // Build the cells for this specific lane
                   const cells = [];
@@ -188,42 +243,83 @@ export default function CalendarView({ campaigns, filters, onOpenDetail, canEdit
                   }
 
                   return (
-                    <tr key={`${row.k}-${li}`} className={ri % 2 === 0 ? 'cal-row-even' : 'cal-row-odd'}>
-                      {isFirstInGroup && (
-                        <td className="cal-section-cell" rowSpan={groupRowSpans[gi]}>{group.sec}</td>
-                      )}
-                      {isFirstInRow && (
-                        <td className="cal-row-label" rowSpan={lanes.length}>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <span>{row.l}</span>
-                            {tierConfig && (
-                              <span 
-                                title={`Tier Weight: ${tierConfig.w}`}
-                                style={{
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  width: 14,
-                                  height: 14,
-                                  borderRadius: '50%',
-                                  background: '#f3f4f6',
-                                  border: '1px solid #d1d5db',
-                                  color: '#6b7280',
-                                  fontSize: 10,
-                                  fontWeight: 'normal',
-                                  fontStyle: 'italic',
-                                  fontFamily: 'serif',
-                                  textTransform: 'none',
-                                  cursor: 'pointer',
-                                  marginLeft: 4
-                                }}
-                              >
-                                i
-                              </span>
-                            )}
-                          </div>
-                        </td>
-                      )}
+                    <tr key={`${row.k}-${li}`} className={rowIndex % 2 === 0 ? 'cal-row-even' : 'cal-row-odd'}>
+                      {leftColumns.map((col, idx) => {
+                        let value = '';
+                        let rowSpan = 1;
+                        let renderCell = true;
+                        const isFirstLane = li === 0;
+                        const rowDetailRowSpan = leftColumns.some(c => c.key === 'rowDetail') ? rowLaneCounts[row.k] || 1 : 1;
+
+                        if (col.key === 'section') {
+                          value = row.section || group.sec;
+                          rowSpan = sectionLabelCell || 1;
+                          renderCell = isFirstLane && sectionLabelCell > 0;
+                        }
+                        if (col.key === 'categoryOrChannel') {
+                          value = row.categoryOrChannel || '';
+                          rowSpan = categoryLabelCell > 0 ? categoryRowSpan[row.k] : 1;
+                          renderCell = isFirstLane && categoryLabelCell > 0;
+                        }
+                        if (col.key === 'rowDetail') {
+                          value = row.rowDetail || row.l || '';
+                          rowSpan = isFirstLane ? rowDetailRowSpan : undefined;
+                          renderCell = isFirstLane;
+                        }
+
+                        if (!renderCell) {
+                          return null;
+                        }
+
+                        return (
+                          <td
+                            key={`${row.k}-${col.key}`}
+                            className="cal-left-cell"
+                            rowSpan={rowSpan}
+                            style={{
+                              position: 'sticky',
+                              left: leftColumnOffsets[idx],
+                              zIndex: 2,
+                              background: rowIndex % 2 === 0 ? '#ffffff' : '#fafafa',
+                              width: leftColumnWidths[idx],
+                              minWidth: leftColumnWidths[idx],
+                              maxWidth: leftColumnWidths[idx],
+                              whiteSpace: 'nowrap',
+                              borderTop: (col.key === 'section' ? sectionLabelCell > 0 : categoryLabelCell > 0) ? '1px solid #e5e7eb' : '1px solid transparent',
+                              fontWeight: (col.key === 'section' ? sectionLabelCell > 0 : (col.key === 'categoryOrChannel' ? categoryLabelCell > 0 : true)) ? 700 : 500,
+                            }}
+                          >
+                            {col.key === 'rowDetail' && tierConfig ? (
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
+                                <span>{value}</span>
+                                <span 
+                                  title={`Tier Weight: ${tierConfig.w}`}
+                                  style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    width: 14,
+                                    height: 14,
+                                    borderRadius: '50%',
+                                    background: '#f3f4f6',
+                                    border: '1px solid #d1d5db',
+                                    color: '#6b7280',
+                                    fontSize: 10,
+                                    fontWeight: 'normal',
+                                    fontStyle: 'italic',
+                                    fontFamily: 'serif',
+                                    textTransform: 'none',
+                                    cursor: 'pointer',
+                                    flexShrink: 0,
+                                  }}
+                                >
+                                  i
+                                </span>
+                              </div>
+                            ) : value}
+                          </td>
+                        );
+                      })}
                       {cells}
                     </tr>
                   );

@@ -58,14 +58,14 @@ export default function FilterBar({ filters, setFilters, canEdit, setCanEdit }) 
   const selectedBrands = Array.isArray(filters.brand) ? filters.brand : [filters.brand || 'All'];
   const selectedCustomers = Array.isArray(filters.customer) ? filters.customer : [filters.customer || 'All'];
 
-  const setOrg = (val) => setFilters(f => ({ ...f, org: f.org === val ? 'AU & NZ' : val, brand: ['All'], customer: ['All'] }));
+  const setOrg = (val) => setFilters(f => ({ ...f, org: val, brand: ['All'], customer: ['All'] }));
   const setCat = (val) => setFilters(f => ({ ...f, category: f.category === val ? 'All' : val, brand: ['All'], customer: ['All'] }));
 
   return (
     <div id="filterbar">
       <span className="filter-label">Country</span>
       <div className="chip-group">
-        {['AU & NZ', 'AU', 'NZ'].map(o => {
+        {['AU', 'NZ'].map(o => {
           const active = filters.org === o;
           return (
             <button 

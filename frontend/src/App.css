@@ -66,14 +66,15 @@ select,input{outline:none}
 #tab-calendar{flex:1;overflow:hidden;display:flex;flex-direction:column;min-height:0}
 #cal-wrap{flex:1;overflow:auto}
 #cal-info{padding:5px 16px;background:#f9fafb;border-bottom:1px solid #e5e7eb;display:flex;gap:8px;align-items:center;flex-shrink:0}
-.cal-table{border-collapse:collapse;min-width:1150px;width: 100%}
-.cal-table th,.cal-table td{border:1px solid #e5e7eb}
+.cal-table{border-collapse:separate;border-spacing:0;min-width:1150px;width: 100%;table-layout:fixed}
+.cal-table th,.cal-table td{border:1px solid #e5e7eb;box-sizing:border-box;background-clip:padding-box}
 .cal-th-q{background:#eff6ff;color:#0a0a0a;font-size:10px;font-weight:800;padding:5px 0;letter-spacing:.07em;text-align:center}
-.cal-th-section{background:#f3f4f6;font-size:8px;color:#0a0a0a;padding:3px 7px;text-align:left}
+.cal-th-section{background:#f3f4f6;font-size:8px;color:#0a0a0a;padding:3px 7px;text-align:left;box-sizing:border-box}
 .cal-th-month{background:#eff6ff;font-size:9px;color:#374151;font-weight:600;padding:4px 2px;text-align:center;min-width:72px}
 .cal-th-month small{display:block;font-size:7px;color:#0a0a0a;font-weight:400}
 .cal-row-even{background:#ffffff}
 .cal-row-odd{background:#fafafa}
+.cal-left-cell{padding:3px 8px;font-size:9px;font-weight:600;color:#0a0a0a;box-shadow:inset -1px 0 0 #e5e7eb;box-sizing:border-box;overflow:hidden}
 .cal-section-cell{background:#f3f4f6;padding:0 5px;text-align:center;writing-mode:vertical-rl;font-size:8px;font-weight:800;letter-spacing:.15em;text-transform:uppercase;vertical-align:middle;width:28px;color:#0a0a0a}
 .cal-row-label{background:#f9fafb;padding:3px 8px;font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;width:76px;color:#0a0a0a}
 .cal-cell{padding:2px;min-width:72px;height:42px;position:relative}
