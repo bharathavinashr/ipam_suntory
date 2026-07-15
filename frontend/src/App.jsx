@@ -13,6 +13,7 @@ export default function App() {
   const [campaigns, setCampaigns] = useState([]);
   const [activeTab, setActiveTab] = useState('calendar');
   const [canEdit, setCanEdit] = useState(false);
+  const [showWeeks, setShowWeeks] = useState(false);
   const [dnOpen, setDnOpen] = useState(false);
   const [filters, setFilters] = useState({ org:'AU', category:'All', brand:['All'], customer:['All'] });
   const [detailCampaign, setDetailCampaign] = useState(null);
@@ -91,6 +92,8 @@ export default function App() {
         setFilters={setFilters} 
         canEdit={canEdit}
         setCanEdit={setCanEdit}
+        showWeeks={showWeeks}
+        setShowWeeks={setShowWeeks}
       />
 
       <div id="tab-content">
@@ -109,7 +112,8 @@ export default function App() {
                 }
               }}
               onSave={handleSave}
-              canEdit={canEdit} />
+              canEdit={canEdit}
+              showWeeks={showWeeks} />
           : <ToolView campaigns={filteredCampaigns}
               onOpenDetail={setDetailCampaign} onOpenForm={setFormCampaignId} canEdit={canEdit} />
         }

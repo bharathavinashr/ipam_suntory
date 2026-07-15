@@ -51,7 +51,7 @@ function MultiSelect({ label, options, selected, onChange, placeholder }) {
 }
 
 // Ensure you add canEdit and setCanEdit to your props here!
-export default function FilterBar({ filters, setFilters, canEdit, setCanEdit }) {
+export default function FilterBar({ filters, setFilters, canEdit, setCanEdit, showWeeks, setShowWeeks }) {
   const brands = getActiveBrands(filters.org, filters.category).filter(b => b !== 'All');
   const customers = getActiveCustomers(filters.category).filter(c => c !== 'All' && c !== 'All Customers');
 
@@ -111,16 +111,25 @@ export default function FilterBar({ filters, setFilters, canEdit, setCanEdit }) 
         onChange={val => setFilters(f => ({ ...f, customer: val }))}
       />
       
-      {/* Pushes the edit button to the far right */}
       <div className="spacer"></div>
-      
-      <button 
-        className={`chip ${canEdit ? 'active' : ''}`} 
-        onClick={() => setCanEdit(!canEdit)}
-        style={{ fontWeight: 600 }}
-      >
-        {canEdit ? '✏️ Editing Table' : '🔒 Edit Table'}
-      </button>
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <button
+          className={`chip ${showWeeks ? 'active' : ''}`}
+          onClick={() => setShowWeeks(!showWeeks)}
+          style={{ fontWeight: 600 }}
+        >
+          {showWeeks ? '📅 Months View' : '📆 Weeks View'}
+        </button>
+
+        <button 
+          className={`chip ${canEdit ? 'active' : ''}`} 
+          onClick={() => setCanEdit(!canEdit)}
+          style={{ fontWeight: 600 }}
+        >
+          {canEdit ? '✏️ Editing Table' : '🔒 Edit Table'}
+        </button>
+      </div>
     </div>
   );
 }
