@@ -50,8 +50,7 @@ function MultiSelect({ label, options, selected, onChange, placeholder }) {
   );
 }
 
-// Ensure you add canEdit and setCanEdit to your props here!
-export default function FilterBar({ filters, setFilters, canEdit, setCanEdit, showWeeks, setShowWeeks }) {
+export default function FilterBar({ filters, setFilters, showWeeks, setShowWeeks }) {
   const brands = getActiveBrands(filters.org, filters.category).filter(b => b !== 'All');
   const customers = getActiveCustomers(filters.category).filter(c => c !== 'All' && c !== 'All Customers');
 
@@ -120,14 +119,6 @@ export default function FilterBar({ filters, setFilters, canEdit, setCanEdit, sh
           style={{ fontWeight: 600 }}
         >
           {showWeeks ? '📅 Months View' : '📆 Weeks View'}
-        </button>
-
-        <button 
-          className={`chip ${canEdit ? 'active' : ''}`} 
-          onClick={() => setCanEdit(!canEdit)}
-          style={{ fontWeight: 600 }}
-        >
-          {canEdit ? '✏️ Editing Table' : '🔒 Edit Table'}
         </button>
       </div>
     </div>

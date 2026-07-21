@@ -1,15 +1,52 @@
 const BASE = import.meta.env.VITE_API_BASE_URL || '/api';
 
+// LOCAL-mode dev convenience only: the "act as <email>" picker stores its choice here so
+// api.js (a plain module, outside React) can attach it to requests. In deployed mode this
+// is never read server-side — identity there comes from the platform's forwarded-auth header.
+const ACTING_EMAIL_KEY = 'ipam_acting_email';
+
+export function setActingEmail(email) {
+  if (email) localStorage.setItem(ACTING_EMAIL_KEY, email);
+  else localStorage.removeItem(ACTING_EMAIL_KEY);
+}
+
+function authHeaders() {
+  const email = localStorage.getItem(ACTING_EMAIL_KEY);
+  return email ? { 'X-Impersonate-Email': email } : {};
+}
+
+async function asJson(r) {
+  const body = await r.json().catch(() => null);
+  if (!r.ok) throw body || { detail: r.statusText };
+  return body;
+}
+
 export const api = {
-  getCampaigns: () => fetch(`${BASE}/campaigns`).then(r => r.json()),
-  getCampaign: (id) => fetch(`${BASE}/campaigns/${id}`).then(r => r.json()),
+  getCampaigns: () => fetch(`${BASE}/campaigns`).then(asJson),
+  getCampaign: (id) => fetch(`${BASE}/campaigns/${id}`).then(asJson),
   createCampaign: (data) => fetch(`${BASE}/campaigns`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data)
-  }).then(r => r.json()),
+    method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders() }, body: JSON.stringify(data)
+  }).then(asJson),
   updateCampaign: (id, data) => fetch(`${BASE}/campaigns/${id}`, {
-    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data)
-  }).then(r => r.json()),
-  deleteCampaign: (id) => fetch(`${BASE}/campaigns/${id}`, { method: 'DELETE' }).then(r => r.json()),
+    method: 'PUT', headers: { 'Content-Type': 'application/json', ...authHeaders() }, body: JSON.stringify(data)
+  }).then(asJson),
+  deleteCampaign: (id) => fetch(`${BASE}/campaigns/${id}`, { method: 'DELETE', headers: authHeaders() }).then(asJson),
+};
+
+export const authApi = {
+  getConfig: () => fetch(`${BASE}/auth/config`).then(asJson),
+  getMe: () => fetch(`${BASE}/auth/me`, { headers: authHeaders() }).then(asJson),
+};
+
+export const usersApi = {
+  list: () => fetch(`${BASE}/users`, { headers: authHeaders() }).then(asJson),
+  create: (data) => fetch(`${BASE}/users`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders() }, body: JSON.stringify(data)
+  }).then(asJson),
+  update: (id, data) => fetch(`${BASE}/users/${id}`, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json', ...authHeaders() }, body: JSON.stringify(data)
+  }).then(asJson),
+  remove: (id) => fetch(`${BASE}/users/${id}`, { method: 'DELETE', headers: authHeaders() }).then(asJson),
 };
 
 export const lookupApi = {

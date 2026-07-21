@@ -1,8 +1,20 @@
 import { useState } from 'react';
 import { TIERS, PERSONAS, bc, tierAcc, fmt } from '../constants';
 import { StatusBadge, TierBadge, BrandBadge } from './Badges';
+import { useAuth } from '../context/AuthContext';
 
-export default function DetailModal({ campaign: c, onClose, onEdit, onDelete, canEdit }) {
+// System Admin, User and Approver can edit; only System Admin and User can delete.
+function canEditCampaign(role) {
+  return role === 'System Admin' || role === 'User' || role === 'Approver';
+}
+function canDeleteCampaign(role) {
+  return role === 'System Admin' || role === 'User';
+}
+
+export default function DetailModal({ campaign: c, onClose, onEdit, onDelete }) {
+  const { userRole } = useAuth();
+  const canEdit = canEditCampaign(userRole);
+  const canDelete = canDeleteCampaign(userRole);
   const [tab, setTab] = useState('overview');
   if (!c) return null;
 
@@ -22,12 +34,12 @@ export default function DetailModal({ campaign: c, onClose, onEdit, onDelete, ca
         <div className="detail-header" style={{ background: `linear-gradient(135deg,${bcfg.bg}50,transparent 60%)` }}>
           <div className="detail-close">
             {canEdit && (
-              <>
-                <button className="close-btn" style={{ background:'#1E3A5F', border:'1px solid #1D4ED8', color:'#60A5FA', width:'auto', padding:'0 13px', fontSize:11, fontWeight:700 }}
-                  onClick={() => { onEdit(c.id); onClose(); }}>✏️ Edit</button>
-                <button className="close-btn" style={{ background:'#3B0A0A', border:'1px solid #7F1D1D', color:'#FCA5A5', width:'auto', padding:'0 13px', fontSize:11, fontWeight:700 }}
-                  onClick={() => { onDelete(c.id); onClose(); }}>🗑️ Delete</button>
-              </>
+              <button className="close-btn" style={{ background:'#1E3A5F', border:'1px solid #1D4ED8', color:'#60A5FA', width:'auto', padding:'0 13px', fontSize:11, fontWeight:700 }}
+                onClick={() => { onEdit(c.id); onClose(); }}>✏️ Edit</button>
+            )}
+            {canDelete && (
+              <button className="close-btn" style={{ background:'#3B0A0A', border:'1px solid #7F1D1D', color:'#FCA5A5', width:'auto', padding:'0 13px', fontSize:11, fontWeight:700 }}
+                onClick={() => { onDelete(c.id); onClose(); }}>🗑️ Delete</button>
             )}
             <button className="close-btn" onClick={onClose}>✕</button>
           </div>

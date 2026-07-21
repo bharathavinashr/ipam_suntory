@@ -1,14 +1,25 @@
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 from typing import List, Optional
 import uuid
 
 from database import engine, get_db, Base
-from models import Campaign, ROProduct, ROCustomer
-from schemas import CampaignCreate, CampaignUpdate, CampaignResponse
+from models import Campaign, ROProduct, ROCustomer, AppUser
+from schemas import (
+    CampaignCreate, CampaignUpdate, CampaignResponse,
+    AppUserCreate, AppUserUpdate, AppUserResponse,
+)
+from auth import (
+    ROLE_NAMES, ROLE_SYSTEM_ADMIN, ROLE_USER, ROLE_APPROVER,
+    get_auth_mode, get_current_user, get_current_user_optional, require_roles,
+)
 
 Base.metadata.create_all(bind=engine)
+
+EDIT_ROLES = (ROLE_SYSTEM_ADMIN, ROLE_USER, ROLE_APPROVER)
+DELETE_ROLES = (ROLE_SYSTEM_ADMIN, ROLE_USER)
 
 app = FastAPI(title="IPAM Campaign API")
 
@@ -174,10 +185,31 @@ def seed_db(db: Session):
         db.commit()
 
 
+def seed_admin_users(db: Session):
+    """One-time bootstrap: if ipam_app_users is empty, copy the System Admins already
+    flagged (role=0) in the shared public.app_users table (owned by sbfo_ro_tracker) so
+    there's at least one IPAM admin without hand-editing the DB. Read-only against that
+    table; IPAM never writes back to it."""
+    if db.query(AppUser).count() > 0:
+        return
+    try:
+        rows = db.execute(
+            text("SELECT DISTINCT email, display_name FROM public.app_users WHERE role = 0")
+        ).fetchall()
+    except Exception:
+        db.rollback()
+        rows = []
+    for r in rows:
+        db.add(AppUser(email=r.email, display_name=r.display_name, role=ROLE_SYSTEM_ADMIN, role_name=ROLE_NAMES[ROLE_SYSTEM_ADMIN]))
+    if rows:
+        db.commit()
+
+
 @app.on_event("startup")
 def startup():
     db = next(get_db())
     seed_db(db)
+    seed_admin_users(db)
 
 
 @app.get("/api/campaigns", response_model=List[CampaignResponse])
@@ -194,7 +226,7 @@ def get_campaign(campaign_id: str, db: Session = Depends(get_db)):
 
 
 @app.post("/api/campaigns", response_model=CampaignResponse, status_code=201)
-def create_campaign(payload: CampaignCreate, db: Session = Depends(get_db)):
+def create_campaign(payload: CampaignCreate, db: Session = Depends(get_db), _user: AppUser = Depends(require_roles(*EDIT_ROLES))):
     count = db.query(Campaign).count()
     new_id = f"C{str(count + 1).zfill(3)}"
     # Ensure unique id
@@ -209,7 +241,7 @@ def create_campaign(payload: CampaignCreate, db: Session = Depends(get_db)):
 
 
 @app.put("/api/campaigns/{campaign_id}", response_model=CampaignResponse)
-def update_campaign(campaign_id: str, payload: CampaignUpdate, db: Session = Depends(get_db)):
+def update_campaign(campaign_id: str, payload: CampaignUpdate, db: Session = Depends(get_db), _user: AppUser = Depends(require_roles(*EDIT_ROLES))):
     c = db.query(Campaign).filter(Campaign.id == campaign_id).first()
     if not c:
         raise HTTPException(status_code=404, detail="Campaign not found")
@@ -221,11 +253,76 @@ def update_campaign(campaign_id: str, payload: CampaignUpdate, db: Session = Dep
 
 
 @app.delete("/api/campaigns/{campaign_id}")
-def delete_campaign(campaign_id: str, db: Session = Depends(get_db)):
+def delete_campaign(campaign_id: str, db: Session = Depends(get_db), _user: AppUser = Depends(require_roles(*DELETE_ROLES))):
     c = db.query(Campaign).filter(Campaign.id == campaign_id).first()
     if not c:
         raise HTTPException(status_code=404, detail="Campaign not found")
     db.delete(c)
+    db.commit()
+    return {"message": "Deleted"}
+
+
+# ── Auth ───────────────────────────────────────────────────────────────────────
+
+@app.get("/api/auth/config")
+def auth_config():
+    return {"auth_mode": get_auth_mode()}
+
+
+@app.get("/api/auth/me", response_model=AppUserResponse)
+def auth_me(user: AppUser = Depends(get_current_user)):
+    return user
+
+
+# ── User management (System Admin only) ─────────────────────────────────────────
+
+def _with_role_name(data: dict) -> dict:
+    if not data.get("role_name"):
+        data["role_name"] = ROLE_NAMES.get(data["role"], "User")
+    return data
+
+
+@app.get("/api/users", response_model=List[AppUserResponse])
+def list_users(db: Session = Depends(get_db), user: Optional[AppUser] = Depends(get_current_user_optional)):
+    # LOCAL mode: open, so the dev "act as" picker can list users before anyone is impersonated.
+    # Deployed mode: only a resolved System Admin may list users.
+    if get_auth_mode() != "LOCAL":
+        if not user or user.role != ROLE_SYSTEM_ADMIN:
+            raise HTTPException(status_code=403, detail="System Admin access required")
+    return db.query(AppUser).order_by(AppUser.email).all()
+
+
+@app.post("/api/users", response_model=AppUserResponse, status_code=201)
+def create_user(payload: AppUserCreate, db: Session = Depends(get_db), _admin: AppUser = Depends(require_roles(ROLE_SYSTEM_ADMIN))):
+    if db.query(AppUser).filter(AppUser.email == payload.email).first():
+        raise HTTPException(status_code=400, detail="A user with this email already exists")
+    user = AppUser(**_with_role_name(payload.model_dump()))
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return user
+
+
+@app.put("/api/users/{user_id}", response_model=AppUserResponse)
+def update_user(user_id: int, payload: AppUserUpdate, db: Session = Depends(get_db), _admin: AppUser = Depends(require_roles(ROLE_SYSTEM_ADMIN))):
+    u = db.query(AppUser).filter(AppUser.id == user_id).first()
+    if not u:
+        raise HTTPException(status_code=404, detail="User not found")
+    for k, v in _with_role_name(payload.model_dump()).items():
+        setattr(u, k, v)
+    db.commit()
+    db.refresh(u)
+    return u
+
+
+@app.delete("/api/users/{user_id}")
+def delete_user(user_id: int, db: Session = Depends(get_db), admin: AppUser = Depends(require_roles(ROLE_SYSTEM_ADMIN))):
+    u = db.query(AppUser).filter(AppUser.id == user_id).first()
+    if not u:
+        raise HTTPException(status_code=404, detail="User not found")
+    if u.id == admin.id:
+        raise HTTPException(status_code=400, detail="You cannot delete your own account")
+    db.delete(u)
     db.commit()
     return {"message": "Deleted"}
 

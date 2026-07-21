@@ -1,7 +1,15 @@
 import { useState, useRef, useMemo } from 'react';
 import { PERIODS, ALL_MONTHS, TIERS, bc, getCalendarLeftColumns, getCalendarRowGroups } from '../constants';
+import { useAuth } from '../context/AuthContext';
 
-export default function CalendarView({ campaigns, filters, onOpenDetail, canEdit, onOpenForm, onSave, showWeeks }) {
+// System Admin, User and Approver can move/create campaigns on the calendar; Viewer is read-only.
+function canEditCalendar(role) {
+  return role === 'System Admin' || role === 'User' || role === 'Approver';
+}
+
+export default function CalendarView({ campaigns, filters, onOpenDetail, onOpenForm, onSave, showWeeks }) {
+  const { userRole } = useAuth();
+  const canEdit = canEditCalendar(userRole);
   const market = filters.org === 'NZ' ? 'NZ' : 'AU';
   const leftColumns = getCalendarLeftColumns(market);
   const leftColumnWidths = market === 'NZ' ? [160, 240] : [160, 240, 240];

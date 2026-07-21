@@ -1,7 +1,20 @@
 import { useState, useEffect, useRef } from 'react';
-import { BRANDS_AU_NONALC, BRANDS_AU_ALC, BRANDS_NZ_NONALC, BRANDS_NZ_ALC,
-  CUSTS_NONALC, CUSTS_ALC, TIERS, STATUS_COL, PERSONAS, ALL_ROWS, bc } from '../constants';
+import { TIERS, STATUS_COL, PERSONAS, ALL_ROWS, BRAND_CFG, bc } from '../constants';
 import { lookupApi } from '../api';
+
+// Longest names first so a specific match (e.g. "Jim Beam") wins over a shorter one
+// that happens to be a substring of it.
+const KNOWN_BRAND_NAMES = Object.keys(BRAND_CFG)
+  .filter(k => k !== 'default')
+  .sort((a, b) => b.length - a.length);
+
+// Fallback for campaigns where no RO Brand was picked: match the campaign name against
+// the known brand list (mirrors the seed-data convention of naming campaigns after their
+// brand, e.g. "CELSIUS FURNACE" -> Celsius, "PEPSI POWER OF ONE" -> Pepsi).
+function matchBrandFromName(name) {
+  const lower = (name || '').toLowerCase();
+  return KNOWN_BRAND_NAMES.find(b => lower.includes(b.toLowerCase())) || '';
+}
 
 const DEFAULT_MILESTONES = [
   { l:'Brief to Agency', d:'', done:false },
@@ -13,8 +26,8 @@ const DEFAULT_MILESTONES = [
 ];
 
 const DEFAULT = {
-  name:'', brand:'', type:'', tier:'', status:'',
-  channel:'', customer:'', market:'', category:'',
+  name:'', brand:'', type:'', tier:'', status:'', big_bet:false,
+  channel:'', customer:'', market:'', category:'', estimated_execution_date:'',
   calendar_rows:['NPD1'], start_date:'', end_date:'', first_order_date:'', last_order_date:'', budget:0, store_targets:0,
   objective:'', success_criteria:'', notes:'', tags:[], personas:[],
   milestones: DEFAULT_MILESTONES, review_due: '', reviewed: false, review_score: 0,
@@ -45,6 +58,8 @@ const getMonthKey = (dateString) => {
   return `${months[parseInt(mm, 10) - 1]}${yyyy.slice(2)}`;
 };
 
+const getTodayStr = () => new Date().toISOString().slice(0, 10);
+
 export default function FormModal({ campaignId, campaigns, onClose, onSave, defaultMonth, defaultRow }) {
   const existing = campaignId ? campaigns.find(c => c.id === campaignId) : null;
   const [tab, setTab] = useState('Overview');
@@ -53,9 +68,10 @@ export default function FormModal({ campaignId, campaigns, onClose, onSave, defa
   const getInitialState = (ext, month, row) => {
     const base = {
       ...DEFAULT,
+      estimated_execution_date: getTodayStr(),
       ...(month && {
-        start_month: month, 
-        end_month: month, 
+        start_month: month,
+        end_month: month,
         start_date: getDefaultDate(month),
         end_date: getDefaultDate(month)
       }),
@@ -71,6 +87,7 @@ export default function FormModal({ campaignId, campaigns, onClose, onSave, defa
       ro_country: ext.ro_country || '',
       start_date: ext.start_date || getDefaultDate(ext.start_month) || '',
       end_date: ext.end_date || getDefaultDate(ext.end_month) || '',
+      estimated_execution_date: ext.estimated_execution_date || '',
       milestones: ext.milestones?.length ? ext.milestones : DEFAULT_MILESTONES,
       tags_str: ext.tags?.join(', ') || ''
     };
@@ -97,10 +114,6 @@ export default function FormModal({ campaignId, campaigns, onClose, onSave, defa
   }, [campaignId, defaultMonth, defaultRow, existing]);
 
   const isNew = !existing;
-  const bList = form.market === 'NZ'
-    ? (form.category === 'Alc' ? BRANDS_NZ_ALC : BRANDS_NZ_NONALC)
-    : (form.category === 'Alc' ? BRANDS_AU_ALC : BRANDS_AU_NONALC);
-  const cList = form.category === 'Alc' ? CUSTS_ALC : CUSTS_NONALC;
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
@@ -254,19 +267,6 @@ export default function FormModal({ campaignId, campaigns, onClose, onSave, defa
     opts.filter(o => o.label.toLowerCase().includes(search.toLowerCase()));
 
   
-  const handleCatMarket = (key, val) => {
-    setForm(f => {
-      const next = { ...f, [key]: val };
-      const bl = next.market === 'NZ'
-        ? (next.category === 'Alc' ? BRANDS_NZ_ALC : BRANDS_NZ_NONALC)
-        : (next.category === 'Alc' ? BRANDS_AU_ALC : BRANDS_AU_NONALC);
-      if (!bl.includes(next.brand)) next.brand = bl[0];
-      const cl = next.category === 'Alc' ? CUSTS_ALC : CUSTS_NONALC;
-      if (!cl.includes(next.customer)) next.customer = cl[0];
-      return next;
-    });
-  };
-
   const toggleArr = (arr, val) => arr.includes(val) ? arr.filter(x => x !== val) : [...arr, val];
 
   const updateMilestone = (idx, field, val) => {
@@ -286,16 +286,26 @@ export default function FormModal({ campaignId, campaigns, onClose, onSave, defa
     const s_month = form.start_date ? getMonthKey(form.start_date) : (form.start_month || '');
     const e_month = form.end_date ? getMonthKey(form.end_date) : (form.end_month || '');
 
+    // Market/Category no longer have their own dropdowns (see Division/Country below) —
+    // derive them so campaigns still match the AU/NZ + Alc/Non-Alc filters used everywhere else.
+    const derivedMarket = /new zealand/i.test(form.ro_country || '') ? 'NZ' : 'AU';
+    const derivedCategory = form.division === 'Alcohol' ? 'Alc' : 'Non-Alc';
+    // Brand (drives chip/badge color) no longer has its own dropdown either — use the first
+    // selected RO Brand, falling back to matching the campaign name against known brands.
+    const derivedBrand = Object.values(selBrands)[0] || matchBrandFromName(form.name);
+
     const payload = {
       name:             form.name,
-      brand:            form.brand            || '',
+      brand:            derivedBrand,
       type:             form.type             || '',
       tier:             form.tier             || '',
       status:           form.status           || '',
+      big_bet:          !!form.big_bet,
+      estimated_execution_date: form.estimated_execution_date || '',
       channel:          form.channel          || '',
       customer:         form.customer         || '',
-      market:           form.market           || '',
-      category:         form.category         || '',
+      market:           derivedMarket,
+      category:         derivedCategory,
       start_month:      s_month,
       end_month:        e_month,
       calendar_rows:    form.calendar_rows    || [],
@@ -329,7 +339,8 @@ export default function FormModal({ campaignId, campaigns, onClose, onSave, defa
     onSave(payload, isNew, campaignId);
   };
 
-  const bcfg = bc(form.brand);
+  const previewBrand = Object.values(selBrands)[0] || matchBrandFromName(form.name);
+  const bcfg = bc(previewBrand);
   const tc = TIERS[form.tier] || TIERS.Silver;
 
   return (
@@ -343,7 +354,7 @@ export default function FormModal({ campaignId, campaigns, onClose, onSave, defa
           <div style={{ display:'flex', gap:8, alignItems:'center' }}>
             <div className="preview-chip" style={{ background:bcfg.bg, border:`1px solid ${bcfg.bdr}` }}>
               <div style={{ fontSize:10, fontWeight:700, color:bcfg.txt }}>{form.name || 'Campaign name'}</div>
-              <div style={{ fontSize:8, opacity:.7, color:bcfg.txt }}>{form.brand} · {form.tier}</div>
+              <div style={{ fontSize:8, opacity:.7, color:bcfg.txt }}>{previewBrand} · {form.tier}</div>
             </div>
             <button className="close-btn" onClick={onClose}>✕</button>
           </div>
@@ -362,58 +373,29 @@ export default function FormModal({ campaignId, campaigns, onClose, onSave, defa
           {/* TAB 1: OVERVIEW */}
           {tab === 'Overview' && (
             <>
-              <div className="field">
-                <label>Campaign / Product Name</label>
-                <input value={form.name} onChange={e => set('name', e.target.value)} placeholder="e.g. V AMETHYST" />
-              </div>
               <div className="form-row">
-                <Field label="Market">
-                  <select value={form.market} onChange={e => handleCatMarket('market', e.target.value)}>
-                    <option value="">-- Select --</option>
-                    {['AU','NZ'].map(v => <option key={v}>{v}</option>)}
-                  </select>
+                <Field label="Campaign / Product Name">
+                  <input value={form.name} onChange={e => set('name', e.target.value)} placeholder="e.g. V AMETHYST" />
                 </Field>
-                <Field label="Category">
-                  <select value={form.category} onChange={e => handleCatMarket('category', e.target.value)}>
-                    <option value="">-- Select --</option>
-                    {['Non-Alc','Alc'].map(v => <option key={v}>{v}</option>)}
-                  </select>
-                </Field>
-                <Field label="Brand">
-                  <select value={form.brand} onChange={e => set('brand', e.target.value)}>
-                    <option value="">-- Select --</option>
-                    {bList.map(b => <option key={b}>{b}</option>)}
-                  </select>
-                </Field>
-                <Field label="Type">
-                  <select value={form.type} onChange={e => set('type', e.target.value)}>
-                    <option value="">-- Select --</option>
-                    {['NPD','Campaign','Promotion','Retailer Programme'].map(v => <option key={v}>{v}</option>)}
-                  </select>
-                </Field>
-                <Field label="Tier">
+                <Field label="Activation Period">
                   <select value={form.tier} onChange={e => set('tier', e.target.value)}>
                     <option value="">-- Select --</option>
                     {Object.keys(TIERS).map(v => <option key={v}>{v}</option>)}
                   </select>
                 </Field>
+              </div>
+              <div className="form-row">
                 <Field label="Status">
                   <select value={form.status} onChange={e => set('status', e.target.value)}>
                     <option value="">-- Select --</option>
                     {Object.keys(STATUS_COL).map(v => <option key={v}>{v}</option>)}
                   </select>
                 </Field>
-                <Field label="Channel">
-                  <select value={form.channel} onChange={e => set('channel', e.target.value)}>
-                    <option value="">-- Select --</option>
-                    {['Grocery','P&C','Route','All Channels'].map(v => <option key={v}>{v}</option>)}
-                  </select>
-                </Field>
-                <Field label="Customer">
-                  <select value={form.customer} onChange={e => set('customer', e.target.value)}>
-                    <option value="">-- Select --</option>
-                    {cList.map(v => <option key={v}>{v}</option>)}
-                  </select>
+                <Field label="Big Bet">
+                  <label style={{ display:'flex', alignItems:'center', gap:6, height:'100%' }}>
+                    <input type="checkbox" checked={!!form.big_bet} onChange={e => set('big_bet', e.target.checked)} />
+                    <span style={{ fontSize:11, color:'#374151' }}>{form.big_bet ? 'Yes' : 'No'}</span>
+                  </label>
                 </Field>
               </div>
 
@@ -453,6 +435,27 @@ export default function FormModal({ campaignId, campaigns, onClose, onSave, defa
                   )}
                 </div>
 
+                <div className="field" ref={brandRef}>
+                  <label>Brand</label>
+                  <div className="multi-combo" onClick={() => (form.division && form.ro_country) && setBrandOpen(o => !o)}>
+                    <span className={Object.keys(selBrands).length ? '' : 'placeholder'}>{multiLabel(selBrands, 'Select brands')}</span>
+                    <span className="combo-arrow">&#9662;</span>
+                  </div>
+                  {brandOpen && (
+                    <div className="combo-dropdown">
+                      <input className="combo-search" placeholder="Search..." value={brandSearch} onChange={e => setBrandSearch(e.target.value)} onClick={e => e.stopPropagation()} />
+                      <label className="combo-item combo-select-all">
+                        <input type="checkbox" checked={brandOpts.length > 0 && Object.keys(selBrands).length === brandOpts.length} onChange={() => toggleAll(setSelBrands, brandOpts, selBrands)} /> Select All
+                      </label>
+                      {filtered(brandOpts, brandSearch).map(o => (
+                        <label key={o.value} className="combo-item">
+                          <input type="checkbox" checked={!!selBrands[o.value]} onChange={() => toggleItem(setSelBrands, o.value, o.label)} /> {o.label}
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
                 <div className="field" ref={subChRef}>
                   <label>Sub Channel</label>
                   <div className="multi-combo" onClick={() => form.ro_country && setSubChannelOpen(o => !o)}>
@@ -468,6 +471,27 @@ export default function FormModal({ campaignId, campaigns, onClose, onSave, defa
                       {filtered(subChannelOpts, subChannelSearch).map(o => (
                         <label key={o.value} className="combo-item">
                           <input type="checkbox" checked={!!selSubChannels[o.value]} onChange={() => toggleItem(setSelSubChannels, o.value, o.label)} /> {o.label}
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="field" ref={brandFamRef}>
+                  <label>Brand Family</label>
+                  <div className="multi-combo" onClick={() => (form.division && form.ro_country) && setBrandFamilyOpen(o => !o)}>
+                    <span className={Object.keys(selBrandFamilies).length ? '' : 'placeholder'}>{multiLabel(selBrandFamilies, 'Select brand families')}</span>
+                    <span className="combo-arrow">&#9662;</span>
+                  </div>
+                  {brandFamilyOpen && (
+                    <div className="combo-dropdown">
+                      <input className="combo-search" placeholder="Search..." value={brandFamilySearch} onChange={e => setBrandFamilySearch(e.target.value)} onClick={e => e.stopPropagation()} />
+                      <label className="combo-item combo-select-all">
+                        <input type="checkbox" checked={brandFamilyOpts.length > 0 && Object.keys(selBrandFamilies).length === brandFamilyOpts.length} onChange={() => toggleAll(setSelBrandFamilies, brandFamilyOpts, selBrandFamilies)} /> Select All
+                      </label>
+                      {filtered(brandFamilyOpts, brandFamilySearch).map(o => (
+                        <label key={o.value} className="combo-item">
+                          <input type="checkbox" checked={!!selBrandFamilies[o.value]} onChange={() => toggleItem(setSelBrandFamilies, o.value, o.label)} /> {o.label}
                         </label>
                       ))}
                     </div>
@@ -495,47 +519,9 @@ export default function FormModal({ campaignId, campaigns, onClose, onSave, defa
                   )}
                 </div>
 
-                <div className="field" ref={brandRef}>
-                  <label>Brand</label>
-                  <div className="multi-combo" onClick={() => (form.division && form.ro_country) && setBrandOpen(o => !o)}>
-                    <span className={Object.keys(selBrands).length ? '' : 'placeholder'}>{multiLabel(selBrands, 'Select brands')}</span>
-                    <span className="combo-arrow">&#9662;</span>
-                  </div>
-                  {brandOpen && (
-                    <div className="combo-dropdown">
-                      <input className="combo-search" placeholder="Search..." value={brandSearch} onChange={e => setBrandSearch(e.target.value)} onClick={e => e.stopPropagation()} />
-                      <label className="combo-item combo-select-all">
-                        <input type="checkbox" checked={brandOpts.length > 0 && Object.keys(selBrands).length === brandOpts.length} onChange={() => toggleAll(setSelBrands, brandOpts, selBrands)} /> Select All
-                      </label>
-                      {filtered(brandOpts, brandSearch).map(o => (
-                        <label key={o.value} className="combo-item">
-                          <input type="checkbox" checked={!!selBrands[o.value]} onChange={() => toggleItem(setSelBrands, o.value, o.label)} /> {o.label}
-                        </label>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <div className="field" ref={brandFamRef}>
-                  <label>Brand Family</label>
-                  <div className="multi-combo" onClick={() => (form.division && form.ro_country) && setBrandFamilyOpen(o => !o)}>
-                    <span className={Object.keys(selBrandFamilies).length ? '' : 'placeholder'}>{multiLabel(selBrandFamilies, 'Select brand families')}</span>
-                    <span className="combo-arrow">&#9662;</span>
-                  </div>
-                  {brandFamilyOpen && (
-                    <div className="combo-dropdown">
-                      <input className="combo-search" placeholder="Search..." value={brandFamilySearch} onChange={e => setBrandFamilySearch(e.target.value)} onClick={e => e.stopPropagation()} />
-                      <label className="combo-item combo-select-all">
-                        <input type="checkbox" checked={brandFamilyOpts.length > 0 && Object.keys(selBrandFamilies).length === brandFamilyOpts.length} onChange={() => toggleAll(setSelBrandFamilies, brandFamilyOpts, selBrandFamilies)} /> Select All
-                      </label>
-                      {filtered(brandFamilyOpts, brandFamilySearch).map(o => (
-                        <label key={o.value} className="combo-item">
-                          <input type="checkbox" checked={!!selBrandFamilies[o.value]} onChange={() => toggleItem(setSelBrandFamilies, o.value, o.label)} /> {o.label}
-                        </label>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                <Field label="Estimated Time for Execution">
+                  <input type="date" value={form.estimated_execution_date || ''} onChange={e => set('estimated_execution_date', e.target.value)} />
+                </Field>
               </div>
 
               <div className="form-row">

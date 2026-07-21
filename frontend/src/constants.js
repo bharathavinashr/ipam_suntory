@@ -26,7 +26,7 @@ export const BRAND_CFG = {
   "Maximus":            { bg:"#8CF2E9", bdr:"#0038CF2E925D40", txt:"#000", dot:"#8CF2E9" },
   
   // Default Fallback
-  "default":            { bg:"#C5F8F4", bdr:"#C5F8F4", txt:"#FFFFFF", dot:"#C5F8F4" },
+  "default":            { bg:"#64748B", bdr:"#64748B", txt:"#FFFFFF", dot:"#64748B" },
 };
 
 export const TIERS = {

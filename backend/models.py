@@ -34,6 +34,18 @@ class ROCustomer(Base):
     account_name = Column(String(200), nullable=False)
 
 
+class AppUser(Base):
+    __tablename__ = "ipam_app_users"
+    __table_args__ = {"schema": SCHEMA}
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    email = Column(String(255), unique=True, nullable=False, index=True)
+    display_name = Column(String(255), nullable=True)
+    role = Column(Integer, nullable=False, default=1)
+    role_name = Column(String(50), nullable=True)
+    is_active = Column(Boolean, nullable=False, default=True)
+
+
 class Campaign(Base):
     __tablename__ = "campaigns"
 
@@ -66,6 +78,8 @@ class Campaign(Base):
     review_due = Column(String, default="TBC")
     reviewed = Column(Boolean, default=False)
     review_score = Column(Integer, nullable=True)
+    big_bet = Column(Boolean, nullable=False, default=False)
+    estimated_execution_date = Column(String, default="")
     ro_division = Column(String, default="")
     ro_country = Column(String, default="")
     ro_channels = Column(JSON, default=list)

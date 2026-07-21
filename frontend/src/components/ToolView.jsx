@@ -1,8 +1,16 @@
 import { useState } from 'react';
 import { STATUS_COL, TIERS, bc, tierAcc, statusCol, fmt } from '../constants';
 import { StatusBadge, TierBadge, BrandBadge, ProgressBar } from './Badges';
+import { useAuth } from '../context/AuthContext';
 
-export default function ToolView({ campaigns, onOpenDetail, onOpenForm, canEdit }) {
+// System Admin, User and Approver can create/edit campaigns; Viewer is read-only.
+function canEditCampaigns(role) {
+  return role === 'System Admin' || role === 'User' || role === 'Approver';
+}
+
+export default function ToolView({ campaigns, onOpenDetail, onOpenForm }) {
+  const { userRole } = useAuth();
+  const canEdit = canEditCampaigns(userRole);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
 

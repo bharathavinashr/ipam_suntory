@@ -37,6 +37,8 @@ class CampaignBase(BaseModel):
     review_due: str = "TBC"
     reviewed: bool = False
     review_score: Optional[int] = None
+    big_bet: bool = False
+    estimated_execution_date: str = ""
     ro_division: str = ""
     ro_country: str = ""
     ro_channels: List[Any] = []
@@ -58,6 +60,29 @@ class CampaignUpdate(CampaignBase):
 
 class CampaignResponse(CampaignBase):
     id: str
+
+    class Config:
+        from_attributes = True
+
+
+class AppUserBase(BaseModel):
+    email: str
+    display_name: Optional[str] = None
+    role: int
+    role_name: Optional[str] = None
+    is_active: bool = True
+
+
+class AppUserCreate(AppUserBase):
+    pass
+
+
+class AppUserUpdate(AppUserBase):
+    pass
+
+
+class AppUserResponse(AppUserBase):
+    id: int
 
     class Config:
         from_attributes = True

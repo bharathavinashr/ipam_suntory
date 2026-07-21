@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import './App.css';
 import { api } from './api';
+import { useAuth } from './context/AuthContext';
 import TopNav from './components/TopNav';
 import FilterBar from './components/FilterBar';
 import CalendarView from './components/CalendarView';
@@ -8,13 +9,15 @@ import ToolView from './components/ToolView';
 import DetailModal from './components/DetailModal';
 import FormModal from './components/FormModal';
 import DataNavi from './components/DataNavi';
+import UserAdmin from './components/UserAdmin';
 
 export default function App() {
+  const { loading: authLoading, error: authError, currentUser } = useAuth();
   const [campaigns, setCampaigns] = useState([]);
   const [activeTab, setActiveTab] = useState('calendar');
-  const [canEdit, setCanEdit] = useState(false);
   const [showWeeks, setShowWeeks] = useState(false);
   const [dnOpen, setDnOpen] = useState(false);
+  const [usersOpen, setUsersOpen] = useState(false);
   const [filters, setFilters] = useState({ org:'AU', category:'All', brand:['All'], customer:['All'] });
   const [detailCampaign, setDetailCampaign] = useState(null);
   const [formCampaignId, setFormCampaignId] = useState(undefined);   // undefined=closed, null=new, string=edit
@@ -78,20 +81,33 @@ export default function App() {
     }
   };
 
+  if (authLoading) {
+    return <div id="app" className="auth-status">Loading…</div>;
+  }
+
+  if (authError || !currentUser) {
+    return (
+      <div id="app" className="auth-status">
+        <div className="content-box" style={{ maxWidth: 420 }}>
+          {authError || 'Unable to resolve your account.'}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div id="app">
-      <TopNav 
-        activeTab={activeTab} 
+      <TopNav
+        activeTab={activeTab}
         setActiveTab={setActiveTab}
-        dnOpen={dnOpen} 
-        setDnOpen={setDnOpen} 
+        dnOpen={dnOpen}
+        setDnOpen={setDnOpen}
+        onOpenUsers={() => setUsersOpen(true)}
       />
 
-      <FilterBar 
-        filters={filters} 
-        setFilters={setFilters} 
-        canEdit={canEdit}
-        setCanEdit={setCanEdit}
+      <FilterBar
+        filters={filters}
+        setFilters={setFilters}
         showWeeks={showWeeks}
         setShowWeeks={setShowWeeks}
       />
@@ -101,43 +117,44 @@ export default function App() {
           ? <CalendarView campaigns={filteredCampaigns} filters={filters}
               onOpenDetail={setDetailCampaign}
               onOpenForm={v => {
-                if (v && typeof v === 'object') { 
-                  setFormCampaignId(v.id); 
+                if (v && typeof v === 'object') {
+                  setFormCampaignId(v.id);
                   setFormDefaultMonth(v.month);
                   setFormDefaultRow(v.rowKey); // Store row on open
-                } else { 
-                  setFormCampaignId(v); 
-                  setFormDefaultMonth(null); 
-                  setFormDefaultRow(null); 
+                } else {
+                  setFormCampaignId(v);
+                  setFormDefaultMonth(null);
+                  setFormDefaultRow(null);
                 }
               }}
               onSave={handleSave}
-              canEdit={canEdit}
               showWeeks={showWeeks} />
           : <ToolView campaigns={filteredCampaigns}
-              onOpenDetail={setDetailCampaign} onOpenForm={setFormCampaignId} canEdit={canEdit} />
+              onOpenDetail={setDetailCampaign} onOpenForm={setFormCampaignId} />
         }
       </div>
 
       {detailCampaign && (
         <DetailModal campaign={detailCampaign} onClose={() => setDetailCampaign(null)}
-          onEdit={(id) => setFormCampaignId(id)} onDelete={handleDelete} canEdit={canEdit} />
+          onEdit={(id) => setFormCampaignId(id)} onDelete={handleDelete} />
       )}
 
       {formCampaignId !== undefined && (
-        <FormModal 
-          campaignId={formCampaignId} 
-          campaigns={campaigns} 
+        <FormModal
+          campaignId={formCampaignId}
+          campaigns={campaigns}
           defaultMonth={formDefaultMonth}
           defaultRow={formDefaultRow} // Pass row to FormModal
-          onClose={() => { 
-            setFormCampaignId(undefined); 
-            setFormDefaultMonth(null); 
-            setFormDefaultRow(null); 
-          }} 
-          onSave={handleSave} 
+          onClose={() => {
+            setFormCampaignId(undefined);
+            setFormDefaultMonth(null);
+            setFormDefaultRow(null);
+          }}
+          onSave={handleSave}
         />
       )}
+
+      {usersOpen && <UserAdmin onClose={() => setUsersOpen(false)} />}
 
       {dnOpen
         ? <DataNavi campaigns={campaigns} onClose={() => setDnOpen(false)} />

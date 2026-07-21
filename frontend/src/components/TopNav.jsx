@@ -1,6 +1,10 @@
 import logoUrl from '../assets/SuntoryOceania-Logo-RGB-Reversed.png';
+import UserSwitcher from './UserSwitcher';
+import { useAuth } from '../context/AuthContext';
 
-export default function TopNav({ activeTab, setActiveTab }) {
+export default function TopNav({ activeTab, setActiveTab, onOpenUsers }) {
+  const { userRole } = useAuth();
+
   return (
     <>
       <div className="logo-header-wrap">
@@ -25,12 +29,20 @@ export default function TopNav({ activeTab, setActiveTab }) {
             <span className="btn-icon">▦</span> Calendar View 
           </button>
           
-          <button 
-            className={`black-icon-btn ${activeTab === 'tool' ? 'active-btn' : ''}`} 
+          <button
+            className={`black-icon-btn ${activeTab === 'tool' ? 'active-btn' : ''}`}
             onClick={() => setActiveTab('tool')}
           >
             <span className="btn-icon">⊞</span> Campaign View
           </button>
+
+          {userRole === 'System Admin' && (
+            <button className="black-icon-btn" onClick={onOpenUsers}>
+              <span className="btn-icon">👤</span> Manage Users
+            </button>
+          )}
+
+          <UserSwitcher />
         </div>
       </nav>
     </>
