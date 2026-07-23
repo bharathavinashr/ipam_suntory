@@ -178,6 +178,33 @@ SEED_CAMPAIGNS = [
 ]
 
 
+# New columns added over time (no Alembic in this project) — create_all() only creates
+# tables that don't exist yet, so an existing `campaigns` table needs these added by hand.
+NEW_CAMPAIGN_COLUMNS = {
+    "fo_date_indirect_au": "VARCHAR DEFAULT ''",
+    "fo_date_direct_au": "VARCHAR DEFAULT ''",
+    "launch_date_au": "VARCHAR DEFAULT ''",
+    "campaign_end_date_au": "VARCHAR DEFAULT ''",
+    "fo_date_direct_nz": "VARCHAR DEFAULT ''",
+    "launch_date_nz": "VARCHAR DEFAULT ''",
+    "campaign_end_date_nz": "VARCHAR DEFAULT ''",
+    "budget_aud": "INTEGER DEFAULT 0",
+    "budget_nzd": "INTEGER DEFAULT 0",
+    "store_targets_au": "INTEGER DEFAULT 0",
+    "store_targets_nz": "INTEGER DEFAULT 0",
+    "priority_number": "VARCHAR DEFAULT ''",
+}
+
+
+def migrate_campaign_columns(db: Session):
+    for column, ddl_type in NEW_CAMPAIGN_COLUMNS.items():
+        try:
+            db.execute(text(f"ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS {column} {ddl_type}"))
+            db.commit()
+        except Exception:
+            db.rollback()
+
+
 def seed_db(db: Session):
     if db.query(Campaign).count() == 0:
         for data in SEED_CAMPAIGNS:
@@ -208,6 +235,7 @@ def seed_admin_users(db: Session):
 @app.on_event("startup")
 def startup():
     db = next(get_db())
+    migrate_campaign_columns(db)
     seed_db(db)
     seed_admin_users(db)
 
@@ -335,62 +363,92 @@ def get_divisions(db: Session = Depends(get_db)):
     return {"options": [{"value": r[0], "label": r[0]} for r in rows]}
 
 
+# ANZ is a synthetic option representing both markets combined; it has no rows of its
+# own in ro_customers/ro_products, so any lookup filtered by it must match both countries.
+ANZ_COUNTRIES = ["Australia", "New Zealand"]
+
+
+def _countries_for(country: str) -> list[str]:
+    return ANZ_COUNTRIES if country == "ANZ" else [country]
+
+
+def _split_codes(codes: str) -> list[str]:
+    return [c.strip() for c in codes.split(",") if c.strip()]
+
+
+def _merge_by_label(rows) -> list[dict]:
+    # Australia and New Zealand use different codes for the same named channel/subchannel/
+    # account/brand family, so under ANZ a plain distinct() shows the same name twice. Merge
+    # rows that share a (trimmed, case-insensitive) label into one option whose value is the
+    # comma-joined set of underlying codes, so downstream filters can match either country's code.
+    merged: dict[str, dict] = {}
+    for code, label in rows:
+        if not label:
+            continue
+        key = label.strip().lower()
+        entry = merged.setdefault(key, {"codes": [], "label": label.strip()})
+        if code not in entry["codes"]:
+            entry["codes"].append(code)
+    return [{"value": ",".join(sorted(e["codes"])), "label": e["label"]} for e in merged.values()]
+
+
 @app.get("/api/lookup/countries")
 def get_countries(division: str, db: Session = Depends(get_db)):
-    rows = (
-        db.query(ROCustomer.company_code, ROCustomer.country)
-        .filter(ROCustomer.division == division)
-        .distinct()
-        .order_by(ROCustomer.country)
-        .all()
-    )
-    return {"options": [{"value": r[0], "label": r[1]} for r in rows if r[1]]}
+    # Always offer both markets plus the combined ANZ option, regardless of which
+    # division/country combinations happen to have rows in ro_customers today.
+    return {
+        "options": [
+            {"value": "Australia", "label": "Australia"},
+            {"value": "New Zealand", "label": "New Zealand"},
+            {"value": "ANZ", "label": "ANZ"},
+        ]
+    }
 
 
 @app.get("/api/lookup/channels")
 def get_channels(country: str, db: Session = Depends(get_db)):
     rows = (
         db.query(ROCustomer.channel_code, ROCustomer.channel_name)
-        .filter(ROCustomer.country == country)
+        .filter(ROCustomer.country.in_(_countries_for(country)))
         .distinct()
         .order_by(ROCustomer.channel_name)
         .all()
     )
-    return {"options": [{"value": r[0], "label": r[1]} for r in rows]}
+    return {"options": _merge_by_label(rows)}
 
 
 @app.get("/api/lookup/subchannels")
 def get_subchannels(country: str, channel_code: Optional[str] = None, db: Session = Depends(get_db)):
     query = db.query(ROCustomer.subchannel_code, ROCustomer.subchannel_name).filter(
-        ROCustomer.country == country
+        ROCustomer.country.in_(_countries_for(country))
     )
     if channel_code:
-        query = query.filter(ROCustomer.channel_code == channel_code)
+        query = query.filter(ROCustomer.channel_code.in_(_split_codes(channel_code)))
     rows = query.distinct().order_by(ROCustomer.subchannel_name).all()
-    return {"options": [{"value": r[0], "label": r[1]} for r in rows]}
+    return {"options": _merge_by_label(rows)}
 
 
 @app.get("/api/lookup/accounts")
 def get_accounts(country: str, subchannel_code: Optional[str] = None, db: Session = Depends(get_db)):
     query = db.query(ROCustomer.account_code, ROCustomer.account_name).filter(
-        ROCustomer.country == country
+        ROCustomer.country.in_(_countries_for(country))
     )
     if subchannel_code:
-        query = query.filter(ROCustomer.subchannel_code == subchannel_code)
+        query = query.filter(ROCustomer.subchannel_code.in_(_split_codes(subchannel_code)))
     rows = query.distinct().order_by(ROCustomer.account_name).all()
-    return {"options": [{"value": r[0], "label": r[1]} for r in rows]}
+    return {"options": _merge_by_label(rows)}
 
 
 @app.get("/api/lookup/brands")
 def get_brands(division: str, country: str, db: Session = Depends(get_db)):
     rows = (
         db.query(ROProduct.brand_code, ROProduct.brand_name)
-        .filter(ROProduct.division == division, ROProduct.country == country)
+        .filter(ROProduct.division == division, ROProduct.country.in_(_countries_for(country)))
         .distinct()
         .order_by(ROProduct.brand_name)
         .all()
     )
-    return {"options": [{"value": r[0], "label": r[1]} for r in rows]}
+    return {"options": _merge_by_label(rows)}
 
 
 @app.get("/api/lookup/brand-families")
@@ -401,21 +459,24 @@ def get_brand_families(
     db: Session = Depends(get_db),
 ):
     query = db.query(ROProduct.brand_family_code, ROProduct.brand_family_name).filter(
-        ROProduct.country == country, ROProduct.division == division
+        ROProduct.country.in_(_countries_for(country)), ROProduct.division == division
     )
     if brand_codes:
-        codes = [c.strip() for c in brand_codes.split(",") if c.strip()]
+        codes = _split_codes(brand_codes)
         if codes:
             query = query.filter(ROProduct.brand_code.in_(codes))
     rows = query.distinct().order_by(ROProduct.brand_family_name).all()
-    return {"options": [{"value": r[0], "label": r[1]} for r in rows]}
+    return {"options": _merge_by_label(rows)}
 
 
 @app.get("/api/lookup/subchannel-details")
 def get_subchannel_details(subchannel_code: str, country: str, db: Session = Depends(get_db)):
     row = (
         db.query(ROCustomer.channel_code, ROCustomer.channel_name)
-        .filter(ROCustomer.subchannel_code == subchannel_code, ROCustomer.country == country)
+        .filter(
+            ROCustomer.subchannel_code.in_(_split_codes(subchannel_code)),
+            ROCustomer.country.in_(_countries_for(country)),
+        )
         .first()
     )
     if not row:
@@ -430,7 +491,10 @@ def get_account_details(account_code: str, country: str, db: Session = Depends(g
             ROCustomer.channel_code, ROCustomer.channel_name,
             ROCustomer.subchannel_code, ROCustomer.subchannel_name,
         )
-        .filter(ROCustomer.account_code == account_code, ROCustomer.country == country)
+        .filter(
+            ROCustomer.account_code.in_(_split_codes(account_code)),
+            ROCustomer.country.in_(_countries_for(country)),
+        )
         .first()
     )
     if not row:
@@ -446,8 +510,8 @@ def get_brand_family_details(brand_family_code: str, country: str, division: str
     row = (
         db.query(ROProduct.brand_code, ROProduct.brand_name)
         .filter(
-            ROProduct.brand_family_code == brand_family_code,
-            ROProduct.country == country,
+            ROProduct.brand_family_code.in_(_split_codes(brand_family_code)),
+            ROProduct.country.in_(_countries_for(country)),
             ROProduct.division == division,
         )
         .first()

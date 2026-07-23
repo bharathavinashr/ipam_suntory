@@ -68,6 +68,21 @@ class Campaign(Base):
     last_order_date = Column(String, default="")
     budget = Column(Integer, default=0)
     store_targets = Column(Integer, default=0)
+    # AU/NZ country-specific dates, shown conditionally based on the Country dropdown
+    # (Australia / New Zealand / ANZ) — see FormModal.jsx.
+    fo_date_indirect_au = Column(String, default="")
+    fo_date_direct_au = Column(String, default="")
+    launch_date_au = Column(String, default="")
+    campaign_end_date_au = Column(String, default="")
+    fo_date_direct_nz = Column(String, default="")
+    launch_date_nz = Column(String, default="")
+    campaign_end_date_nz = Column(String, default="")
+    # AU/NZ budget & store target lines, split out when Country = ANZ; `budget` and
+    # `store_targets` above remain the combined totals used across the rest of the app.
+    budget_aud = Column(Integer, default=0)
+    budget_nzd = Column(Integer, default=0)
+    store_targets_au = Column(Integer, default=0)
+    store_targets_nz = Column(Integer, default=0)
     objective = Column(Text, default="")
     success_criteria = Column(Text, default="")
     notes = Column(Text, default="")
@@ -79,6 +94,7 @@ class Campaign(Base):
     reviewed = Column(Boolean, default=False)
     review_score = Column(Integer, nullable=True)
     big_bet = Column(Boolean, nullable=False, default=False)
+    priority_number = Column(String, default="")
     estimated_execution_date = Column(String, default="")
     ro_division = Column(String, default="")
     ro_country = Column(String, default="")

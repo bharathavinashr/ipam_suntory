@@ -27,6 +27,17 @@ class CampaignBase(BaseModel):
     last_order_date: str = ""
     budget: int = 0
     store_targets: int = 0
+    fo_date_indirect_au: str = ""
+    fo_date_direct_au: str = ""
+    launch_date_au: str = ""
+    campaign_end_date_au: str = ""
+    fo_date_direct_nz: str = ""
+    launch_date_nz: str = ""
+    campaign_end_date_nz: str = ""
+    budget_aud: int = 0
+    budget_nzd: int = 0
+    store_targets_au: int = 0
+    store_targets_nz: int = 0
     objective: str = ""
     success_criteria: str = ""
     notes: str = ""
@@ -38,6 +49,7 @@ class CampaignBase(BaseModel):
     reviewed: bool = False
     review_score: Optional[int] = None
     big_bet: bool = False
+    priority_number: str = ""
     estimated_execution_date: str = ""
     ro_division: str = ""
     ro_country: str = ""

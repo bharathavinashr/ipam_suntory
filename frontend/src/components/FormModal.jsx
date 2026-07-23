@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { TIERS, STATUS_COL, PERSONAS, ALL_ROWS, BRAND_CFG, bc } from '../constants';
+import { TIERS, STATUS_COL, PERSONAS, BRAND_CFG, bc } from '../constants';
 import { lookupApi } from '../api';
 
 // Longest names first so a specific match (e.g. "Jim Beam") wins over a shorter one
@@ -16,19 +16,33 @@ function matchBrandFromName(name) {
   return KNOWN_BRAND_NAMES.find(b => lower.includes(b.toLowerCase())) || '';
 }
 
+const PRIORITY_NUMBERS = ['#1', '#2', '#3', '#4', '#5'];
+
 const DEFAULT_MILESTONES = [
-  { l:'Brief to Agency', d:'', done:false },
-  { l:'Scamps Review', d:'', done:false },
-  { l:'Finance Approval', d:'', done:false },
-  { l:'POS Distribution', d:'', done:false },
-  { l:'Go Live', d:'', done:false },
-  { l:'13-Week Review', d:'', done:false },
+  { l:'Budget agreed with Shopper Marketing', d:'', done:false },
+  { l:'Planning workshops with KAMs', d:'', done:false },
+  { l:'Approved KV handed over to Shopper Marketing', d:'', done:false },
+  { l:'Brief Raydar Channel specific POS and PoFs', d:'', done:false },
+  { l:'Book Channel specific Media/Space (Precision 12w) (Cartology 12w) Early as Poss', d:'', done:false },
+  { l:'Cycle Briefing and share PoFs', d:'', done:false },
+  { l:'Liaise with Agency/ KAMs on feedback', d:'', done:false },
+  { l:'Customer approval of final POS suite', d:'', done:false },
+  { l:'POS Order Sheet to ASMs', d:'', done:false },
+  { l:'Send final Dispatch sheet to Raydar and BrandSpec for print & dispatch', d:'', done:false },
+  { l:'Dispatch to regions', d:'', done:false },
+  { l:'Live in Market OILS', d:'', done:false },
+  { l:'Live in Market OTG', d:'', done:false },
+  { l:'Live in Market GROCERY', d:'', done:false },
+  { l:'Live in Market LICENSED', d:'', done:false },
 ];
 
 const DEFAULT = {
-  name:'', brand:'', type:'', tier:'', status:'', big_bet:false,
+  name:'', brand:'', type:'', tier:'', status:'', big_bet:false, priority_number:'',
   channel:'', customer:'', market:'', category:'', estimated_execution_date:'',
   calendar_rows:['NPD1'], start_date:'', end_date:'', first_order_date:'', last_order_date:'', budget:0, store_targets:0,
+  fo_date_indirect_au:'', fo_date_direct_au:'', launch_date_au:'', campaign_end_date_au:'',
+  fo_date_direct_nz:'', launch_date_nz:'', campaign_end_date_nz:'',
+  budget_aud:0, budget_nzd:0, store_targets_au:0, store_targets_nz:0,
   objective:'', success_criteria:'', notes:'', tags:[], personas:[],
   milestones: DEFAULT_MILESTONES, review_due: '', reviewed: false, review_score: 0,
 };
@@ -280,11 +294,27 @@ export default function FormModal({ campaignId, campaigns, onClose, onSave, defa
   // Validation rule: Start Date must be less than or equal to End Date
   const isDateInvalid = form.start_date && form.end_date && form.start_date > form.end_date;
 
+  // Country-conditional field visibility: Australia and ANZ both need the AU field set,
+  // New Zealand and ANZ both need the NZ field set.
+  const isAU = form.ro_country === 'Australia' || form.ro_country === 'ANZ';
+  const isNZ = form.ro_country === 'New Zealand' || form.ro_country === 'ANZ';
+
   const handleSave = () => {
     if (!form.name.trim() || isDateInvalid) return;
 
     const s_month = form.start_date ? getMonthKey(form.start_date) : (form.start_month || '');
     const e_month = form.end_date ? getMonthKey(form.end_date) : (form.end_month || '');
+
+    // Budget/Store Targets split into AUD/NZD lines when a country is picked; `budget` and
+    // `store_targets` stay the combined totals used everywhere else in the app (cards, KPIs, DataNavi).
+    const derivedBudget = form.ro_country === 'Australia' ? (form.budget_aud || 0)
+      : form.ro_country === 'New Zealand' ? (form.budget_nzd || 0)
+      : form.ro_country === 'ANZ' ? (form.budget_aud || 0) + (form.budget_nzd || 0)
+      : (form.budget || 0);
+    const derivedStoreTargets = form.ro_country === 'Australia' ? (form.store_targets_au || 0)
+      : form.ro_country === 'New Zealand' ? (form.store_targets_nz || 0)
+      : form.ro_country === 'ANZ' ? (form.store_targets_au || 0) + (form.store_targets_nz || 0)
+      : (form.store_targets || 0);
 
     // Market/Category no longer have their own dropdowns (see Division/Country below) —
     // derive them so campaigns still match the AU/NZ + Alc/Non-Alc filters used everywhere else.
@@ -301,6 +331,7 @@ export default function FormModal({ campaignId, campaigns, onClose, onSave, defa
       tier:             form.tier             || '',
       status:           form.status           || '',
       big_bet:          !!form.big_bet,
+      priority_number:  form.priority_number   || '',
       estimated_execution_date: form.estimated_execution_date || '',
       channel:          form.channel          || '',
       customer:         form.customer         || '',
@@ -313,8 +344,19 @@ export default function FormModal({ campaignId, campaigns, onClose, onSave, defa
       ld_date:          form.ld_date          || '',
       first_order_date: form.first_order_date || '',
       last_order_date:  form.last_order_date  || '',
-      budget:           form.budget           || 0,
-      store_targets:    form.store_targets    || 0,
+      budget:           derivedBudget,
+      store_targets:    derivedStoreTargets,
+      fo_date_indirect_au:  form.fo_date_indirect_au  || '',
+      fo_date_direct_au:    form.fo_date_direct_au    || '',
+      launch_date_au:       form.launch_date_au       || '',
+      campaign_end_date_au: form.campaign_end_date_au || '',
+      fo_date_direct_nz:    form.fo_date_direct_nz    || '',
+      launch_date_nz:       form.launch_date_nz       || '',
+      campaign_end_date_nz: form.campaign_end_date_nz || '',
+      budget_aud:        form.budget_aud        || 0,
+      budget_nzd:        form.budget_nzd        || 0,
+      store_targets_au:  form.store_targets_au  || 0,
+      store_targets_nz:  form.store_targets_nz  || 0,
       objective:        form.objective        || '',
       success_criteria: form.success_criteria || '',
       notes:            form.notes            || '',
@@ -377,7 +419,7 @@ export default function FormModal({ campaignId, campaigns, onClose, onSave, defa
                 <Field label="Campaign / Product Name">
                   <input value={form.name} onChange={e => set('name', e.target.value)} placeholder="e.g. V AMETHYST" />
                 </Field>
-                <Field label="Activation Period">
+                <Field label="Activation Tier">
                   <select value={form.tier} onChange={e => set('tier', e.target.value)}>
                     <option value="">-- Select --</option>
                     {Object.keys(TIERS).map(v => <option key={v}>{v}</option>)}
@@ -391,12 +433,25 @@ export default function FormModal({ campaignId, campaigns, onClose, onSave, defa
                     {Object.keys(STATUS_COL).map(v => <option key={v}>{v}</option>)}
                   </select>
                 </Field>
-                <Field label="Big Bet">
-                  <label style={{ display:'flex', alignItems:'center', gap:6, height:'100%' }}>
-                    <input type="checkbox" checked={!!form.big_bet} onChange={e => set('big_bet', e.target.checked)} />
-                    <span style={{ fontSize:11, color:'#374151' }}>{form.big_bet ? 'Yes' : 'No'}</span>
-                  </label>
-                </Field>
+                <div style={{ display:'flex', gap:10 }}>
+                  <div style={{ flex:'0 0 60%' }}>
+                    <Field label="Priority Number">
+                      <select value={form.priority_number || ''} onChange={e => set('priority_number', e.target.value)}>
+                        <option value="">-- Select --</option>
+                        {PRIORITY_NUMBERS.map(v => <option key={v}>{v}</option>)}
+                      </select>
+                    </Field>
+                  </div>
+                  <div style={{ flex:'0 0 40%' }}>
+                    <Field label="Big Bet">
+                      <label style={{ display:'flex', alignItems:'center', gap:6, margin:0, height:34 }}>
+                        <input type="checkbox" checked={!!form.big_bet} onChange={e => set('big_bet', e.target.checked)}
+                          style={{ width:16, height:16, flex:'0 0 auto', margin:0 }} />
+                        <span style={{ fontSize:11, color:'#374151', textTransform:'none' }}>{form.big_bet ? 'Yes' : 'No'}</span>
+                      </label>
+                    </Field>
+                  </div>
+                </div>
               </div>
 
               {/* ── RO Lookup Fields ── */}
@@ -518,10 +573,6 @@ export default function FormModal({ campaignId, campaigns, onClose, onSave, defa
                     </div>
                   )}
                 </div>
-
-                <Field label="Estimated Time for Execution">
-                  <input type="date" value={form.estimated_execution_date || ''} onChange={e => set('estimated_execution_date', e.target.value)} />
-                </Field>
               </div>
 
               <div className="form-row">
@@ -531,19 +582,96 @@ export default function FormModal({ campaignId, campaigns, onClose, onSave, defa
                 <Field label="End Date">
                   <input type="date" value={form.end_date} onChange={e => set('end_date', e.target.value)} />
                 </Field>
-                <Field label="First Order Date">
-                  <input type="date" value={form.first_order_date || ''} onChange={e => set('first_order_date', e.target.value)} />
-                </Field>
-                <Field label="Last Order Date">
-                  <input type="date" value={form.last_order_date || ''} onChange={e => set('last_order_date', e.target.value)} />
-                </Field>
-                <Field label="Budget ($)">
-                  <input type="number" value={form.budget} onChange={e => set('budget', +e.target.value)} />
-                </Field>
-                <Field label="Store Targets">
-                  <input type="number" value={form.store_targets} onChange={e => set('store_targets', +e.target.value)} />
-                </Field>
+                {!form.ro_country && (
+                  <>
+                    <Field label="First Order Date">
+                      <input type="date" value={form.first_order_date || ''} onChange={e => set('first_order_date', e.target.value)} />
+                    </Field>
+                    <Field label="Last Order Date">
+                      <input type="date" value={form.last_order_date || ''} onChange={e => set('last_order_date', e.target.value)} />
+                    </Field>
+                  </>
+                )}
               </div>
+
+              {/* ── Country-conditional AU/NZ order & launch dates ── */}
+              {isAU && (
+                <div className="form-row">
+                  <Field label="First Order Date (Indirect) AU">
+                    <input type="date" value={form.fo_date_indirect_au || ''} onChange={e => set('fo_date_indirect_au', e.target.value)} />
+                  </Field>
+                  <Field label="First Order Date (Directs) AU">
+                    <input type="date" value={form.fo_date_direct_au || ''} onChange={e => set('fo_date_direct_au', e.target.value)} />
+                  </Field>
+                  <Field label="Launch Date AU">
+                    <input type="date" value={form.launch_date_au || ''} onChange={e => set('launch_date_au', e.target.value)} />
+                  </Field>
+                  <Field label="Campaign End Date AU">
+                    <input type="date" value={form.campaign_end_date_au || ''} onChange={e => set('campaign_end_date_au', e.target.value)} />
+                  </Field>
+                </div>
+              )}
+              {isNZ && (
+                <div className="form-row">
+                  <Field label="First Order Date (Directs only) NZ">
+                    <input type="date" value={form.fo_date_direct_nz || ''} onChange={e => set('fo_date_direct_nz', e.target.value)} />
+                  </Field>
+                  <Field label="Launch Date NZ">
+                    <input type="date" value={form.launch_date_nz || ''} onChange={e => set('launch_date_nz', e.target.value)} />
+                  </Field>
+                  <Field label="Campaign End Date NZ">
+                    <input type="date" value={form.campaign_end_date_nz || ''} onChange={e => set('campaign_end_date_nz', e.target.value)} />
+                  </Field>
+                </div>
+              )}
+
+              {/* ── Budget & Store Target lines — split into AUD/NZD when Country = ANZ ── */}
+              {!form.ro_country && (
+                <div className="form-row">
+                  <Field label="Budget ($)">
+                    <input type="number" value={form.budget || ''} placeholder="0" onChange={e => set('budget', +e.target.value)} />
+                  </Field>
+                  <Field label="Store Targets">
+                    <input type="number" value={form.store_targets || ''} placeholder="0" onChange={e => set('store_targets', +e.target.value)} />
+                  </Field>
+                </div>
+              )}
+              {form.ro_country === 'Australia' && (
+                <div className="form-row">
+                  <Field label="Budget (AUD)">
+                    <input type="number" value={form.budget_aud || ''} placeholder="0" onChange={e => set('budget_aud', +e.target.value)} />
+                  </Field>
+                  <Field label="Store Targets (AU)">
+                    <input type="number" value={form.store_targets_au || ''} placeholder="0" onChange={e => set('store_targets_au', +e.target.value)} />
+                  </Field>
+                </div>
+              )}
+              {form.ro_country === 'New Zealand' && (
+                <div className="form-row">
+                  <Field label="Budget (NZD)">
+                    <input type="number" value={form.budget_nzd || ''} placeholder="0" onChange={e => set('budget_nzd', +e.target.value)} />
+                  </Field>
+                  <Field label="Store Targets (NZ)">
+                    <input type="number" value={form.store_targets_nz || ''} placeholder="0" onChange={e => set('store_targets_nz', +e.target.value)} />
+                  </Field>
+                </div>
+              )}
+              {form.ro_country === 'ANZ' && (
+                <div className="form-row">
+                  <Field label="Budget (AUD)">
+                    <input type="number" value={form.budget_aud || ''} placeholder="0" onChange={e => set('budget_aud', +e.target.value)} />
+                  </Field>
+                  <Field label="Budget (NZD)">
+                    <input type="number" value={form.budget_nzd || ''} placeholder="0" onChange={e => set('budget_nzd', +e.target.value)} />
+                  </Field>
+                  <Field label="Store Targets (AU)">
+                    <input type="number" value={form.store_targets_au || ''} placeholder="0" onChange={e => set('store_targets_au', +e.target.value)} />
+                  </Field>
+                  <Field label="Store Targets (NZ)">
+                    <input type="number" value={form.store_targets_nz || ''} placeholder="0" onChange={e => set('store_targets_nz', +e.target.value)} />
+                  </Field>
+                </div>
+              )}
 
               {isDateInvalid && (
                 <div style={{ color: '#ef4444', fontSize: 12, marginTop: 4, marginBottom: 8, fontWeight: 500 }}>
@@ -575,18 +703,6 @@ export default function FormModal({ campaignId, campaigns, onClose, onSave, defa
                     <button key={p.role} type="button" className={`toggle-chip ${form.personas.includes(p.role) ? 'on' : ''}`}
                       onClick={() => set('personas', toggleArr(form.personas, p.role))}>
                       {p.icon} {p.role}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="field">
-                <label>Calendar Rows</label>
-                <div className="toggle-group">
-                  {ALL_ROWS.map(r => (
-                    <button key={r.k} type="button" className={`toggle-chip ${form.calendar_rows.includes(r.k) ? 'on' : ''}`}
-                      onClick={() => set('calendar_rows', toggleArr(form.calendar_rows, r.k))}>
-                      {r.l}
                     </button>
                   ))}
                 </div>
