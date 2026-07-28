@@ -193,6 +193,7 @@ NEW_CAMPAIGN_COLUMNS = {
     "store_targets_au": "INTEGER DEFAULT 0",
     "store_targets_nz": "INTEGER DEFAULT 0",
     "priority_number": "VARCHAR DEFAULT ''",
+    "campaign_category": "VARCHAR DEFAULT ''",
 }
 
 
@@ -392,6 +393,30 @@ def _merge_by_label(rows) -> list[dict]:
     return [{"value": ",".join(sorted(e["codes"])), "label": e["label"]} for e in merged.values()]
 
 
+def _merge_accounts_with_channels(rows) -> list[dict]:
+    # Same code-merging as _merge_by_label, but also records which channel(s) each account
+    # belongs to (scoped to whatever channel_code/subchannel_code filter the caller applied),
+    # so the form can pair a multi-selected account back to the exact channel it came from.
+    merged: dict[str, dict] = {}
+    for account_code, account_name, channel_code, channel_name in rows:
+        if not account_name:
+            continue
+        key = account_name.strip().lower()
+        entry = merged.setdefault(key, {"codes": [], "label": account_name.strip(), "channels": {}})
+        if account_code not in entry["codes"]:
+            entry["codes"].append(account_code)
+        if channel_code and channel_code not in entry["channels"]:
+            entry["channels"][channel_code] = channel_name.strip()
+    return [
+        {
+            "value": ",".join(sorted(e["codes"])),
+            "label": e["label"],
+            "channels": [{"value": code, "label": name} for code, name in e["channels"].items()],
+        }
+        for e in merged.values()
+    ]
+
+
 @app.get("/api/lookup/countries")
 def get_countries(division: str, db: Session = Depends(get_db)):
     # Always offer both markets plus the combined ANZ option, regardless of which
@@ -429,14 +454,24 @@ def get_subchannels(country: str, channel_code: Optional[str] = None, db: Sessio
 
 
 @app.get("/api/lookup/accounts")
-def get_accounts(country: str, subchannel_code: Optional[str] = None, db: Session = Depends(get_db)):
-    query = db.query(ROCustomer.account_code, ROCustomer.account_name).filter(
+def get_accounts(
+    country: str,
+    channel_code: Optional[str] = None,
+    subchannel_code: Optional[str] = None,
+    db: Session = Depends(get_db),
+):
+    query = db.query(
+        ROCustomer.account_code, ROCustomer.account_name,
+        ROCustomer.channel_code, ROCustomer.channel_name,
+    ).filter(
         ROCustomer.country.in_(_countries_for(country))
     )
+    if channel_code:
+        query = query.filter(ROCustomer.channel_code.in_(_split_codes(channel_code)))
     if subchannel_code:
         query = query.filter(ROCustomer.subchannel_code.in_(_split_codes(subchannel_code)))
     rows = query.distinct().order_by(ROCustomer.account_name).all()
-    return {"options": _merge_by_label(rows)}
+    return {"options": _merge_accounts_with_channels(rows)}
 
 
 @app.get("/api/lookup/brands")

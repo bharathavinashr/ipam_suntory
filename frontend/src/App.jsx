@@ -120,7 +120,7 @@ export default function App() {
                 if (v && typeof v === 'object') {
                   setFormCampaignId(v.id);
                   setFormDefaultMonth(v.month);
-                  setFormDefaultRow(v.rowKey); // Store row on open
+                  setFormDefaultRow(v.block ? { block: v.block, value: v.value, channel: v.channel, account: v.account, priorityNumber: v.priorityNumber } : null);
                 } else {
                   setFormCampaignId(v);
                   setFormDefaultMonth(null);

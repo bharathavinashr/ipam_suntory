@@ -59,6 +59,9 @@ class Campaign(Base):
     customer = Column(String, nullable=False)
     market = Column(String, nullable=False)
     category = Column(String, nullable=False)
+    # Activation category shown in the calendar's Category block (e.g. "NDP"); distinct
+    # from `category` above (Alc/Non-Alc, derived from Division).
+    campaign_category = Column(String(50), default="")
     start_month = Column(String, nullable=False)
     end_month = Column(String, nullable=False)
     calendar_rows = Column(JSON, default=list)

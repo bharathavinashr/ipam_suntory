@@ -18,6 +18,7 @@ class CampaignBase(BaseModel):
     customer: str = ""
     market: str = ""
     category: str = ""
+    campaign_category: str = ""
     start_month: str = ""
     end_month: str = ""
     calendar_rows: List[str] = []

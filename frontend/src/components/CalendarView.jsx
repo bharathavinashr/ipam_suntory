@@ -1,6 +1,34 @@
 import { useState, useRef, useMemo } from 'react';
-import { PERIODS, ALL_MONTHS, TIERS, bc, getCalendarLeftColumns, getCalendarRowGroups } from '../constants';
+import { PERIODS, ALL_MONTHS, TIERS, bc, getCalendarLeftColumns } from '../constants';
+import { buildDynamicRowGroups, packLanes } from '../lib/calendarBlocks';
 import { useAuth } from '../context/AuthContext';
+
+// Row -> the field(s) that must change for a campaign to move into that row when dropped
+// there. Row placement is derived from campaign data (see calendarBlocks.js), so "moving"
+// a campaign to a different row means editing the underlying field, not a row-membership list.
+function rowFieldUpdates(row) {
+  if (row.block === 'category') return { campaign_category: row.value };
+  if (row.block === 'priority') return { tier: row.value };
+  if (row.block === 'channel') {
+    if (row.account) {
+      return {
+        ro_channels: [{ value: row.channel, label: row.channel }],
+        ro_accounts: [{ value: row.account, label: row.account }],
+        channel: row.channel,
+        customer: row.account,
+      };
+    }
+    // Channel-level generic slot (no named account) — identified by Priority Number instead.
+    return {
+      ro_channels: [{ value: row.channel, label: row.channel }],
+      ro_accounts: [],
+      channel: row.channel,
+      customer: '',
+      priority_number: row.priorityNumber,
+    };
+  }
+  return {};
+}
 
 // System Admin, User and Approver can move/create campaigns on the calendar; Viewer is read-only.
 function canEditCalendar(role) {
@@ -11,13 +39,13 @@ export default function CalendarView({ campaigns, filters, onOpenDetail, onOpenF
   const { userRole } = useAuth();
   const canEdit = canEditCalendar(userRole);
   const market = filters.org === 'NZ' ? 'NZ' : 'AU';
-  const leftColumns = getCalendarLeftColumns(market);
-  const leftColumnWidths = market === 'NZ' ? [160, 240] : [160, 240, 240];
+  const leftColumns = getCalendarLeftColumns();
+  const leftColumnWidths = [160, 170, 170];
   const leftColumnOffsets = leftColumnWidths.reduce((acc, width, idx) => {
     if (idx === 0) return [0];
     return [...acc, acc[idx - 1] + leftColumnWidths[idx - 1]];
   }, []);
-  const rowGroups = getCalendarRowGroups(market);
+  const rowGroups = useMemo(() => buildDynamicRowGroups(campaigns), [campaigns]);
   const dragRef = useRef(null);
   
   const [dropTarget, setDropTarget] = useState(null); // { rowKey, timeKey }
@@ -99,7 +127,7 @@ export default function CalendarView({ campaigns, filters, onOpenDetail, onOpenF
 
   rowGroups.forEach((group) => {
     group.rows.forEach(row => {
-      const rowCamps = campaigns.filter(c => Array.isArray(c.calendar_rows) && c.calendar_rows.includes(row.k));
+      const rowCamps = campaigns.filter(row.match);
 
       // Map to start and end indices based on the active time scale (Months vs Weeks)
       const items = rowCamps.map(c => {
@@ -121,21 +149,7 @@ export default function CalendarView({ campaigns, filters, onOpenDetail, onOpenF
         return { ...c, si, ei };
       });
 
-      items.sort((a, b) => a.si - b.si || (b.ei - b.si) - (a.ei - a.si));
-
-      const lanes = [];
-      items.forEach(item => {
-        let placed = false;
-        for (const lane of lanes) {
-          const overlap = lane.some(existing => !(item.ei < existing.si || item.si > existing.ei));
-          if (!overlap) {
-            lane.push(item);
-            placed = true;
-            break;
-          }
-        }
-        if (!placed) lanes.push([item]);
-      });
+      const lanes = packLanes(items);
 
       const hasEntries = lanes.length > 0;
       if (lanes.length === 0) lanes.push([]); 
@@ -165,19 +179,17 @@ export default function CalendarView({ campaigns, filters, onOpenDetail, onOpenF
     }
     sectionRowSpan[row.k] = span;
 
-    if (market === 'AU') {
-      let categoryIndex = index;
-      while (categoryIndex < nextIndex) {
-        const categoryKey = flattenedRows[categoryIndex].row.categoryOrChannel || '';
-        let categorySpan = 0;
-        let nextCategoryIndex = categoryIndex;
-        while (nextCategoryIndex < nextIndex && (flattenedRows[nextCategoryIndex].row.categoryOrChannel || '') === categoryKey) {
-          categorySpan += rowLaneCounts[flattenedRows[nextCategoryIndex].row.k] || 1;
-          nextCategoryIndex += 1;
-        }
-        categoryRowSpan[flattenedRows[categoryIndex].row.k] = categorySpan;
-        categoryIndex = nextCategoryIndex;
+    let categoryIndex = index;
+    while (categoryIndex < nextIndex) {
+      const categoryKey = flattenedRows[categoryIndex].row.categoryOrChannel || '';
+      let categorySpan = 0;
+      let nextCategoryIndex = categoryIndex;
+      while (nextCategoryIndex < nextIndex && (flattenedRows[nextCategoryIndex].row.categoryOrChannel || '') === categoryKey) {
+        categorySpan += rowLaneCounts[flattenedRows[nextCategoryIndex].row.k] || 1;
+        nextCategoryIndex += 1;
       }
+      categoryRowSpan[flattenedRows[categoryIndex].row.k] = categorySpan;
+      categoryIndex = nextCategoryIndex;
     }
     index = nextIndex;
   }
@@ -265,7 +277,7 @@ export default function CalendarView({ campaigns, filters, onOpenDetail, onOpenF
                 const lanes = rowLanes[row.k];
                 const prevRow = group.rows[rowIndex - 1];
                 const sectionLabelCell = !prevRow || prevRow.section !== row.section ? sectionRowSpan[row.k] : 0;
-                const categoryLabelCell = market === 'AU' && (!prevRow || prevRow.section !== row.section || prevRow.categoryOrChannel !== row.categoryOrChannel)
+                const categoryLabelCell = (!prevRow || prevRow.section !== row.section || prevRow.categoryOrChannel !== row.categoryOrChannel)
                   ? categoryRowSpan[row.k] || 0
                   : 0;
                 
@@ -298,24 +310,23 @@ export default function CalendarView({ campaigns, filters, onOpenDetail, onOpenF
                             setDropTarget(null);
                             const drag = dragRef.current;
                             if (!drag) return;
-                            const { campaign, sourceRow } = drag;
-                            
+                            const { campaign } = drag;
+
                             // Calculate dropped offsets correctly matching timescale
                             const dragSi = timeColumns.findIndex(tc => (showWeeks ? tc.monthKey : tc.k) === campaign.start_month);
-                            const dragEi = showWeeks 
-                              ? timeColumns.findLastIndex(tc => tc.monthKey === campaign.end_month) 
+                            const dragEi = showWeeks
+                              ? timeColumns.findLastIndex(tc => tc.monthKey === campaign.end_month)
                               : timeColumns.findIndex(tc => tc.k === campaign.end_month);
-                            
+
                             const dragSpan = (dragEi >= 0 && dragSi >= 0) ? (dragEi - dragSi) : 0;
                             const newSi = Math.max(0, Math.min(timeColumns.length - 1 - dragSpan, camp.si));
                             const newEi = newSi + dragSpan;
-                            
+
                             // Map resolved timescale index back to month keys to persist accurately
                             const saveStartMonth = showWeeks ? timeColumns[newSi].monthKey : timeColumns[newSi].k;
                             const saveEndMonth = showWeeks ? timeColumns[newEi].monthKey : timeColumns[newEi].k;
 
-                            const newRows = [...new Set(campaign.calendar_rows.map(r => r === sourceRow ? row.k : r))];
-                            onSave({ ...campaign, start_month: saveStartMonth, end_month: saveEndMonth, calendar_rows: newRows }, false);
+                            onSave({ ...campaign, ...rowFieldUpdates(row), start_month: saveStartMonth, end_month: saveEndMonth }, false);
                           } : undefined}
                         >
                           <div
@@ -323,7 +334,7 @@ export default function CalendarView({ campaigns, filters, onOpenDetail, onOpenF
                             style={{ background: cfg.bg, border: `1px solid ${cfg.bdr}` }}
                             draggable={canEdit}
                             onDragStart={canEdit ? e => {
-                              dragRef.current = { campaign: camp, sourceRow: row.k };
+                              dragRef.current = { campaign: camp };
                               e.dataTransfer.effectAllowed = 'move';
                             } : undefined}
                             onDragEnd={canEdit ? () => { dragRef.current = null; setDropTarget(null); } : undefined}
@@ -356,26 +367,25 @@ export default function CalendarView({ campaigns, filters, onOpenDetail, onOpenF
                             setDropTarget(null);
                             const drag = dragRef.current;
                             if (!drag) return;
-                            const { campaign, sourceRow } = drag;
-                            
+                            const { campaign } = drag;
+
                             const dragSi = timeColumns.findIndex(tc => (showWeeks ? tc.monthKey : tc.k) === campaign.start_month);
-                            const dragEi = showWeeks 
+                            const dragEi = showWeeks
                               ? timeColumns.findLastIndex(tc => tc.monthKey === campaign.end_month)
                               : timeColumns.findIndex(tc => tc.k === campaign.end_month);
-                            
+
                             const dragSpan = (dragEi >= 0 && dragSi >= 0) ? (dragEi - dragSi) : 0;
                             const dropIndex = timeColumns.findIndex(tc => tc.k === timeUnit.k);
                             const newSi = Math.max(0, Math.min(timeColumns.length - 1 - dragSpan, dropIndex));
                             const newEi = newSi + dragSpan;
-                            
+
                             const saveStartMonth = showWeeks ? timeColumns[newSi].monthKey : timeColumns[newSi].k;
                             const saveEndMonth = showWeeks ? timeColumns[newEi].monthKey : timeColumns[newEi].k;
 
-                            const newRows = [...new Set(campaign.calendar_rows.map(r => r === sourceRow ? row.k : r))];
-                            onSave({ ...campaign, start_month: saveStartMonth, end_month: saveEndMonth, calendar_rows: newRows }, false);
+                            onSave({ ...campaign, ...rowFieldUpdates(row), start_month: saveStartMonth, end_month: saveEndMonth }, false);
                           } : undefined}
                         >
-                          {canEdit && <div className="cal-add-cell" onClick={() => onOpenForm({ id: null, month: formMonthKey, rowKey: row.k })}>＋</div>}
+                          {canEdit && <div className="cal-add-cell" onClick={() => onOpenForm({ id: null, month: formMonthKey, block: row.block, value: row.value, channel: row.channel, account: row.account, priorityNumber: row.priorityNumber })}>＋</div>}
                         </td>
                       );
                       mIdx++;

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { TIERS, STATUS_COL, PERSONAS, BRAND_CFG, bc } from '../constants';
+import { TIERS, STATUS_COL, PERSONAS, BRAND_CFG, bc, CATEGORY_OPTIONS } from '../constants';
 import { lookupApi } from '../api';
 
 // Longest names first so a specific match (e.g. "Jim Beam") wins over a shorter one
@@ -38,7 +38,7 @@ const DEFAULT_MILESTONES = [
 
 const DEFAULT = {
   name:'', brand:'', type:'', tier:'', status:'', big_bet:false, priority_number:'',
-  channel:'', customer:'', market:'', category:'', estimated_execution_date:'',
+  channel:'', customer:'', market:'', category:'', campaign_category:'', estimated_execution_date:'',
   calendar_rows:['NPD1'], start_date:'', end_date:'', first_order_date:'', last_order_date:'', budget:0, store_targets:0,
   fo_date_indirect_au:'', fo_date_direct_au:'', launch_date_au:'', campaign_end_date_au:'',
   fo_date_direct_nz:'', launch_date_nz:'', campaign_end_date_nz:'',
@@ -89,7 +89,9 @@ export default function FormModal({ campaignId, campaigns, onClose, onSave, defa
         start_date: getDefaultDate(month),
         end_date: getDefaultDate(month)
       }),
-      ...(row && { calendar_rows: [row] })
+      ...(row?.block === 'category' && { campaign_category: row.value }),
+      ...(row?.block === 'priority' && { tier: row.value }),
+      ...(row?.block === 'channel' && row.priorityNumber && { priority_number: row.priorityNumber }),
     };
 
     if (!ext) return { ...base, tags_str: '' };
@@ -125,6 +127,7 @@ export default function FormModal({ campaignId, campaigns, onClose, onSave, defa
     setSelBrandFamilies(toSelMap(existing?.ro_brand_families));
     setAttachments(existing?.attachments || []);
     setLinks(existing?.links || []);
+    setPendingChannelPrefill(defaultRow?.block === 'channel' ? { channel: defaultRow.channel, account: defaultRow.account } : null);
   }, [campaignId, defaultMonth, defaultRow, existing]);
 
   const isNew = !existing;
@@ -147,6 +150,13 @@ export default function FormModal({ campaignId, campaigns, onClose, onSave, defa
   const [selAccounts, setSelAccounts]       = useState(() => toSelMap(existing?.ro_accounts));
   const [selBrands, setSelBrands]           = useState(() => toSelMap(existing?.ro_brands));
   const [selBrandFamilies, setSelBrandFamilies] = useState(() => toSelMap(existing?.ro_brand_families));
+
+  // Best-effort prefill when opened via the calendar's Channel/Account block "+" — the row
+  // only knows the channel/account label (not the RO code), so we wait for the option lists
+  // to load (once Division + Country are picked) and select the matching label.
+  const [pendingChannelPrefill, setPendingChannelPrefill] = useState(() =>
+    defaultRow?.block === 'channel' ? { channel: defaultRow.channel, account: defaultRow.account } : null
+  );
 
   // dropdown open state
   const [channelOpen, setChannelOpen]           = useState(false);
@@ -202,7 +212,7 @@ export default function FormModal({ campaignId, campaigns, onClose, onSave, defa
       .catch(() => { setCountryOpts([]); restoringRef.current = false; });
   }, [form.division]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Load channels + all accounts when country changes; reset selections only if user changed it
+  // Load channels when country changes; reset selections only if user changed it
   useEffect(() => {
     const country = form.ro_country;
     if (!country) {
@@ -214,9 +224,6 @@ export default function FormModal({ campaignId, campaigns, onClose, onSave, defa
     lookupApi.getChannels(country)
       .then(d => setChannelOpts(d.options || []))
       .catch(() => setChannelOpts([]));
-    lookupApi.getAccounts(country)
-      .then(d => setAccountOpts(d.options || []))
-      .catch(() => setAccountOpts([]));
     if (!restoring) { setSelChannels({}); setSelSubChannels({}); setSelAccounts({}); }
   }, [form.ro_country]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -255,6 +262,20 @@ export default function FormModal({ campaignId, campaigns, onClose, onSave, defa
       .catch(() => setSubChannelOpts([]));
   }, [selChannels, form.ro_country]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Load accounts filtered by whichever channels/sub-channels are selected — narrows the
+  // Account list instead of always showing every account in the country. Each returned
+  // option is tagged with the channel(s) (within this filter) it belongs to, which
+  // handleSave uses to pair a selected account back to its exact channel.
+  useEffect(() => {
+    const country = form.ro_country;
+    if (!country) { setAccountOpts([]); return; }
+    const channelCodes = Object.keys(selChannels).join(',');
+    const subChannelCodes = Object.keys(selSubChannels).join(',');
+    lookupApi.getAccounts(country, channelCodes, subChannelCodes)
+      .then(d => setAccountOpts(d.options || []))
+      .catch(() => setAccountOpts([]));
+  }, [selChannels, selSubChannels, form.ro_country]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Load brand families filtered by selected brands
   useEffect(() => {
     const { division, ro_country } = form;
@@ -264,6 +285,20 @@ export default function FormModal({ campaignId, campaigns, onClose, onSave, defa
       .then(d => setBrandFamilyOpts(d.options || []))
       .catch(() => setBrandFamilyOpts([]));
   }, [selBrands, form.division, form.ro_country]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Resolve the best-effort Channel/Account prefill once the option lists load (i.e. once
+  // the user, or a restored campaign, has Division + Country set).
+  useEffect(() => {
+    if (!pendingChannelPrefill || !channelOpts.length) return;
+    const match = channelOpts.find(o => o.label === pendingChannelPrefill.channel);
+    if (match) setSelChannels(prev => ({ ...prev, [match.value]: match.label }));
+  }, [channelOpts, pendingChannelPrefill]);
+
+  useEffect(() => {
+    if (!pendingChannelPrefill || !accountOpts.length) return;
+    const match = accountOpts.find(o => o.label === pendingChannelPrefill.account);
+    if (match) setSelAccounts(prev => ({ ...prev, [match.value]: match.label }));
+  }, [accountOpts, pendingChannelPrefill]);
 
   // ── Multi-select toggle helpers ───────────────────────────────────────────
   const toggleItem = (setter, code, name) =>
@@ -335,6 +370,7 @@ export default function FormModal({ campaignId, campaigns, onClose, onSave, defa
       estimated_execution_date: form.estimated_execution_date || '',
       channel:          form.channel          || '',
       customer:         form.customer         || '',
+      campaign_category: form.campaign_category || '',
       market:           derivedMarket,
       category:         derivedCategory,
       start_month:      s_month,
@@ -371,7 +407,12 @@ export default function FormModal({ campaignId, campaigns, onClose, onSave, defa
       ro_country:       form.ro_country       || '',
       ro_channels:      Object.entries(selChannels).map(([value, label]) => ({ value, label })),
       ro_subchannels:   Object.entries(selSubChannels).map(([value, label]) => ({ value, label })),
-      ro_accounts:      Object.entries(selAccounts).map(([value, label]) => ({ value, label })),
+      // Tag each account with the channel(s) it belongs to (from the currently filtered
+      // accountOpts) so the calendar can map multi-channel + multi-account campaigns to the
+      // exact channel each account came from, instead of assuming ro_channels[0].
+      ro_accounts:      Object.entries(selAccounts).map(([value, label]) => ({
+        value, label, channels: accountOpts.find(o => o.value === value)?.channels || [],
+      })),
       ro_brands:        Object.entries(selBrands).map(([value, label]) => ({ value, label })),
       ro_brand_families: Object.entries(selBrandFamilies).map(([value, label]) => ({ value, label })),
       attachments,
@@ -490,26 +531,12 @@ export default function FormModal({ campaignId, campaigns, onClose, onSave, defa
                   )}
                 </div>
 
-                <div className="field" ref={brandRef}>
-                  <label>Brand</label>
-                  <div className="multi-combo" onClick={() => (form.division && form.ro_country) && setBrandOpen(o => !o)}>
-                    <span className={Object.keys(selBrands).length ? '' : 'placeholder'}>{multiLabel(selBrands, 'Select brands')}</span>
-                    <span className="combo-arrow">&#9662;</span>
-                  </div>
-                  {brandOpen && (
-                    <div className="combo-dropdown">
-                      <input className="combo-search" placeholder="Search..." value={brandSearch} onChange={e => setBrandSearch(e.target.value)} onClick={e => e.stopPropagation()} />
-                      <label className="combo-item combo-select-all">
-                        <input type="checkbox" checked={brandOpts.length > 0 && Object.keys(selBrands).length === brandOpts.length} onChange={() => toggleAll(setSelBrands, brandOpts, selBrands)} /> Select All
-                      </label>
-                      {filtered(brandOpts, brandSearch).map(o => (
-                        <label key={o.value} className="combo-item">
-                          <input type="checkbox" checked={!!selBrands[o.value]} onChange={() => toggleItem(setSelBrands, o.value, o.label)} /> {o.label}
-                        </label>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                <Field label="Category">
+                  <select value={form.campaign_category || ''} onChange={e => set('campaign_category', e.target.value)}>
+                    <option value="">-- Select --</option>
+                    {CATEGORY_OPTIONS.map(v => <option key={v} value={v}>{v}</option>)}
+                  </select>
+                </Field>
 
                 <div className="field" ref={subChRef}>
                   <label>Sub Channel</label>
@@ -532,21 +559,21 @@ export default function FormModal({ campaignId, campaigns, onClose, onSave, defa
                   )}
                 </div>
 
-                <div className="field" ref={brandFamRef}>
-                  <label>Brand Family</label>
-                  <div className="multi-combo" onClick={() => (form.division && form.ro_country) && setBrandFamilyOpen(o => !o)}>
-                    <span className={Object.keys(selBrandFamilies).length ? '' : 'placeholder'}>{multiLabel(selBrandFamilies, 'Select brand families')}</span>
+                <div className="field" ref={brandRef}>
+                  <label>Brand</label>
+                  <div className="multi-combo" onClick={() => (form.division && form.ro_country) && setBrandOpen(o => !o)}>
+                    <span className={Object.keys(selBrands).length ? '' : 'placeholder'}>{multiLabel(selBrands, 'Select brands')}</span>
                     <span className="combo-arrow">&#9662;</span>
                   </div>
-                  {brandFamilyOpen && (
+                  {brandOpen && (
                     <div className="combo-dropdown">
-                      <input className="combo-search" placeholder="Search..." value={brandFamilySearch} onChange={e => setBrandFamilySearch(e.target.value)} onClick={e => e.stopPropagation()} />
+                      <input className="combo-search" placeholder="Search..." value={brandSearch} onChange={e => setBrandSearch(e.target.value)} onClick={e => e.stopPropagation()} />
                       <label className="combo-item combo-select-all">
-                        <input type="checkbox" checked={brandFamilyOpts.length > 0 && Object.keys(selBrandFamilies).length === brandFamilyOpts.length} onChange={() => toggleAll(setSelBrandFamilies, brandFamilyOpts, selBrandFamilies)} /> Select All
+                        <input type="checkbox" checked={brandOpts.length > 0 && Object.keys(selBrands).length === brandOpts.length} onChange={() => toggleAll(setSelBrands, brandOpts, selBrands)} /> Select All
                       </label>
-                      {filtered(brandFamilyOpts, brandFamilySearch).map(o => (
+                      {filtered(brandOpts, brandSearch).map(o => (
                         <label key={o.value} className="combo-item">
-                          <input type="checkbox" checked={!!selBrandFamilies[o.value]} onChange={() => toggleItem(setSelBrandFamilies, o.value, o.label)} /> {o.label}
+                          <input type="checkbox" checked={!!selBrands[o.value]} onChange={() => toggleItem(setSelBrands, o.value, o.label)} /> {o.label}
                         </label>
                       ))}
                     </div>
@@ -568,6 +595,27 @@ export default function FormModal({ campaignId, campaigns, onClose, onSave, defa
                       {filtered(accountOpts, accountSearch).map(o => (
                         <label key={o.value} className="combo-item">
                           <input type="checkbox" checked={!!selAccounts[o.value]} onChange={() => toggleItem(setSelAccounts, o.value, o.label)} /> {o.label}
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="field" ref={brandFamRef}>
+                  <label>Brand Family</label>
+                  <div className="multi-combo" onClick={() => (form.division && form.ro_country) && setBrandFamilyOpen(o => !o)}>
+                    <span className={Object.keys(selBrandFamilies).length ? '' : 'placeholder'}>{multiLabel(selBrandFamilies, 'Select brand families')}</span>
+                    <span className="combo-arrow">&#9662;</span>
+                  </div>
+                  {brandFamilyOpen && (
+                    <div className="combo-dropdown">
+                      <input className="combo-search" placeholder="Search..." value={brandFamilySearch} onChange={e => setBrandFamilySearch(e.target.value)} onClick={e => e.stopPropagation()} />
+                      <label className="combo-item combo-select-all">
+                        <input type="checkbox" checked={brandFamilyOpts.length > 0 && Object.keys(selBrandFamilies).length === brandFamilyOpts.length} onChange={() => toggleAll(setSelBrandFamilies, brandFamilyOpts, selBrandFamilies)} /> Select All
+                      </label>
+                      {filtered(brandFamilyOpts, brandFamilySearch).map(o => (
+                        <label key={o.value} className="combo-item">
+                          <input type="checkbox" checked={!!selBrandFamilies[o.value]} onChange={() => toggleItem(setSelBrandFamilies, o.value, o.label)} /> {o.label}
                         </label>
                       ))}
                     </div>

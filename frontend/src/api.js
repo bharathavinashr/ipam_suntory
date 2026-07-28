@@ -61,8 +61,9 @@ export const lookupApi = {
     if (channelCode) params.set('channel_code', channelCode);
     return fetch(`${BASE}/lookup/subchannels?${params}`).then(r => r.json());
   },
-  getAccounts: (country, subchannelCode = '') => {
+  getAccounts: (country, channelCode = '', subchannelCode = '') => {
     const params = new URLSearchParams({ country });
+    if (channelCode) params.set('channel_code', channelCode);
     if (subchannelCode) params.set('subchannel_code', subchannelCode);
     return fetch(`${BASE}/lookup/accounts?${params}`).then(r => r.json());
   },
