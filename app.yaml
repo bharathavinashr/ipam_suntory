@@ -4,3 +4,5 @@ command:
 env:
   - name: DATABASE_URL
     valueFrom: db_url_secret_dev
+  - name: DATABRICKS_VOLUME_PATH
+    valueFrom: ipam_attachments_volume

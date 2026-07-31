@@ -1,4 +1,7 @@
-from sqlalchemy import Column, String, Integer, Boolean, JSON, Text
+import uuid
+from datetime import datetime
+
+from sqlalchemy import Column, String, Integer, Boolean, JSON, Text, DateTime, ForeignKey
 from database import Base
 
 SCHEMA = "public"
@@ -106,5 +109,20 @@ class Campaign(Base):
     ro_accounts = Column(JSON, default=list)
     ro_brands = Column(JSON, default=list)
     ro_brand_families = Column(JSON, default=list)
+    # Legacy base64-blob attachments, no longer read or written — superseded by the
+    # campaign_attachments table below (files now live in a Databricks Volume).
     attachments = Column(JSON, default=list)
     links = Column(JSON, default=list)
+
+
+class CampaignAttachment(Base):
+    __tablename__ = "campaign_attachments"
+
+    id = Column(String, primary_key=True, default=lambda: uuid.uuid4().hex)
+    campaign_id = Column(String, ForeignKey("campaigns.id", ondelete="CASCADE"), nullable=False, index=True)
+    filename = Column(String, nullable=False)
+    volume_path = Column(String, nullable=False)
+    content_type = Column(String, default="")
+    size = Column(Integer, default=0)
+    uploaded_by = Column(String, nullable=False)
+    uploaded_at = Column(DateTime, nullable=False, default=datetime.utcnow)

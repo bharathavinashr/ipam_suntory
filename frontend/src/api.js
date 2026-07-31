@@ -33,6 +33,24 @@ export const api = {
   deleteCampaign: (id) => fetch(`${BASE}/campaigns/${id}`, { method: 'DELETE', headers: authHeaders() }).then(asJson),
 };
 
+export const attachmentsApi = {
+  list: (campaignId) => fetch(`${BASE}/campaigns/${campaignId}/attachments`).then(asJson),
+  upload: (campaignId, file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return fetch(`${BASE}/campaigns/${campaignId}/attachments`, {
+      method: 'POST', headers: authHeaders(), body: formData
+    }).then(asJson);
+  },
+  rename: (campaignId, attachmentId, filename) => fetch(`${BASE}/campaigns/${campaignId}/attachments/${attachmentId}`, {
+    method: 'PATCH', headers: { 'Content-Type': 'application/json', ...authHeaders() }, body: JSON.stringify({ filename })
+  }).then(asJson),
+  remove: (campaignId, attachmentId) => fetch(`${BASE}/campaigns/${campaignId}/attachments/${attachmentId}`, {
+    method: 'DELETE', headers: authHeaders()
+  }).then(asJson),
+  downloadUrl: (campaignId, attachmentId) => `${BASE}/campaigns/${campaignId}/attachments/${attachmentId}/download`,
+};
+
 export const authApi = {
   getConfig: () => fetch(`${BASE}/auth/config`).then(asJson),
   getMe: () => fetch(`${BASE}/auth/me`, { headers: authHeaders() }).then(asJson),

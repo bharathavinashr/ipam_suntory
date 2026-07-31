@@ -10,10 +10,17 @@ resources:
             scope: my-app-secrets
             key: db_url_secret_dev
             permission: READ
+        - name: ipam_attachments_volume
+          uc_securable:
+            securable_type: VOLUME
+            securable_full_name: budmp_sbfo_dev.riskandopportunity.sbfo_ro
+            permission: WRITE_VOLUME
 
       config:
         env:
           - name: DATABASE_URL
             valueFrom: db_url_secret_dev
+          - name: DATABRICKS_VOLUME_PATH
+            valueFrom: ipam_attachments_volume
 
       source_code_path: .

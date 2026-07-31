@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 from typing import Optional, List, Any
+from datetime import datetime
 
 
 class MilestoneSchema(BaseModel):
@@ -59,7 +60,6 @@ class CampaignBase(BaseModel):
     ro_accounts: List[Any] = []
     ro_brands: List[Any] = []
     ro_brand_families: List[Any] = []
-    attachments: List[Any] = []
     links: List[Any] = []
 
 
@@ -76,6 +76,23 @@ class CampaignResponse(CampaignBase):
 
     class Config:
         from_attributes = True
+
+
+class AttachmentResponse(BaseModel):
+    id: str
+    campaign_id: str
+    filename: str
+    content_type: str
+    size: int
+    uploaded_by: str
+    uploaded_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class AttachmentRename(BaseModel):
+    filename: str
 
 
 class AppUserBase(BaseModel):

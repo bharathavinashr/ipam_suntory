@@ -516,7 +516,7 @@ h1,h2,h3,h4,h5,h6{font-family:'Jost',Arial,sans-serif;font-weight:500}
   font-size: 12px;
 }
 .attach-icon { font-size: 14px; flex-shrink: 0; }
-.attach-name { flex: 1; color: #4f46e5; text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.attach-name { color: #4f46e5; text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .attach-name:hover { text-decoration: underline; }
 .attach-size { font-size: 10px; color: #94a3b8; flex-shrink: 0; }
 .attach-remove {
@@ -524,6 +524,22 @@ h1,h2,h3,h4,h5,h6{font-family:'Jost',Arial,sans-serif;font-weight:500}
   color: #94a3b8; font-size: 13px; padding: 0 2px; flex-shrink: 0;
 }
 .attach-remove:hover { color: #ef4444; }
+
+.attach-zone-disabled { cursor: not-allowed; color: #94a3b8; }
+.attach-zone-disabled:hover { border-color: #cbd5e1; background: none; color: #94a3b8; }
+
+.attach-name-group { flex: 1; display: flex; align-items: baseline; gap: 6px; min-width: 0; }
+.attach-meta { font-size: 10px; color: #94a3b8; flex-shrink: 0; }
+.attach-rename {
+  background: none; border: none; cursor: pointer;
+  color: #94a3b8; font-size: 11px; padding: 0; flex-shrink: 0;
+}
+.attach-rename:hover { color: #6366f1; }
+.attach-rename-input {
+  flex: 1; padding: 3px 6px; border: 1px solid #6366f1; border-radius: 4px;
+  font-size: 12px; font-family: inherit; background: #fff; color: #1e293b; min-width: 0;
+}
+.attach-rename-input:focus { outline: none; }
 
 .link-add-row { display: flex; gap: 6px; align-items: center; }
 .link-input {

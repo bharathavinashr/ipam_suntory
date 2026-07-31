@@ -1,15 +1,20 @@
-from fastapi import FastAPI, Depends, HTTPException
+from datetime import datetime
+
+from fastapi import FastAPI, Depends, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 from typing import List, Optional
 import uuid
 
+import volumes
 from database import engine, get_db, Base
-from models import Campaign, ROProduct, ROCustomer, AppUser
+from models import Campaign, ROProduct, ROCustomer, AppUser, CampaignAttachment
 from schemas import (
     CampaignCreate, CampaignUpdate, CampaignResponse,
     AppUserCreate, AppUserUpdate, AppUserResponse,
+    AttachmentResponse, AttachmentRename,
 )
 from auth import (
     ROLE_NAMES, ROLE_SYSTEM_ADMIN, ROLE_USER, ROLE_APPROVER,
@@ -286,7 +291,98 @@ def delete_campaign(campaign_id: str, db: Session = Depends(get_db), _user: AppU
     c = db.query(Campaign).filter(Campaign.id == campaign_id).first()
     if not c:
         raise HTTPException(status_code=404, detail="Campaign not found")
+    for a in db.query(CampaignAttachment).filter(CampaignAttachment.campaign_id == campaign_id).all():
+        volumes.delete_attachment(a.volume_path)
     db.delete(c)
+    db.commit()
+    return {"message": "Deleted"}
+
+
+# ── Attachments ───────────────────────────────────────────────────────────────
+
+def _get_campaign_or_404(campaign_id: str, db: Session) -> Campaign:
+    c = db.query(Campaign).filter(Campaign.id == campaign_id).first()
+    if not c:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+    return c
+
+
+def _get_attachment_or_404(campaign_id: str, attachment_id: str, db: Session) -> CampaignAttachment:
+    a = db.query(CampaignAttachment).filter(
+        CampaignAttachment.id == attachment_id, CampaignAttachment.campaign_id == campaign_id
+    ).first()
+    if not a:
+        raise HTTPException(status_code=404, detail="Attachment not found")
+    return a
+
+
+@app.get("/api/campaigns/{campaign_id}/attachments", response_model=List[AttachmentResponse])
+def list_attachments(campaign_id: str, db: Session = Depends(get_db)):
+    _get_campaign_or_404(campaign_id, db)
+    return db.query(CampaignAttachment).filter(CampaignAttachment.campaign_id == campaign_id).order_by(CampaignAttachment.uploaded_at).all()
+
+
+@app.post("/api/campaigns/{campaign_id}/attachments", response_model=AttachmentResponse, status_code=201)
+def upload_attachment(
+    campaign_id: str,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    user: AppUser = Depends(require_roles(*EDIT_ROLES)),
+):
+    _get_campaign_or_404(campaign_id, db)
+    data = file.file.read()
+    volume_path = volumes.upload_attachment(campaign_id, file.filename, data)
+    attachment = CampaignAttachment(
+        campaign_id=campaign_id,
+        filename=file.filename,
+        volume_path=volume_path,
+        content_type=file.content_type or "",
+        size=len(data),
+        uploaded_by=user.email,
+        uploaded_at=datetime.utcnow(),
+    )
+    db.add(attachment)
+    db.commit()
+    db.refresh(attachment)
+    return attachment
+
+
+@app.get("/api/campaigns/{campaign_id}/attachments/{attachment_id}/download")
+def download_attachment(campaign_id: str, attachment_id: str, db: Session = Depends(get_db)):
+    a = _get_attachment_or_404(campaign_id, attachment_id, db)
+    data = volumes.download_attachment(a.volume_path)
+    return Response(
+        content=data,
+        media_type=a.content_type or "application/octet-stream",
+        headers={"Content-Disposition": f'attachment; filename="{a.filename}"'},
+    )
+
+
+@app.patch("/api/campaigns/{campaign_id}/attachments/{attachment_id}", response_model=AttachmentResponse)
+def rename_attachment(
+    campaign_id: str,
+    attachment_id: str,
+    payload: AttachmentRename,
+    db: Session = Depends(get_db),
+    _user: AppUser = Depends(require_roles(*EDIT_ROLES)),
+):
+    a = _get_attachment_or_404(campaign_id, attachment_id, db)
+    a.filename = payload.filename
+    db.commit()
+    db.refresh(a)
+    return a
+
+
+@app.delete("/api/campaigns/{campaign_id}/attachments/{attachment_id}")
+def delete_attachment(
+    campaign_id: str,
+    attachment_id: str,
+    db: Session = Depends(get_db),
+    _user: AppUser = Depends(require_roles(*EDIT_ROLES)),
+):
+    a = _get_attachment_or_404(campaign_id, attachment_id, db)
+    volumes.delete_attachment(a.volume_path)
+    db.delete(a)
     db.commit()
     return {"message": "Deleted"}
 

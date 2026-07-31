@@ -1,6 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { TIERS, STATUS_COL, PERSONAS, BRAND_CFG, bc, CATEGORY_OPTIONS } from '../constants';
-import { lookupApi } from '../api';
+import { lookupApi, attachmentsApi } from '../api';
+
+function formatUploadedAt(iso) {
+  if (!iso) return '';
+  const d = new Date(iso.endsWith('Z') ? iso : `${iso}Z`);
+  return d.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+}
 
 // Longest names first so a specific match (e.g. "Jim Beam") wins over a shorter one
 // that happens to be a substring of it.
@@ -112,7 +118,8 @@ export default function FormModal({ campaignId, campaigns, onClose, onSave, defa
   const [form, setForm] = useState(() => getInitialState(existing, defaultMonth, defaultRow));
   const restoringRef = useRef(false);
 
-  const [attachments, setAttachments] = useState(() => existing?.attachments || []);
+  const [attachments, setAttachments] = useState([]);
+  const [renamingId, setRenamingId] = useState(null);
   const [links, setLinks] = useState(() => existing?.links || []);
   const [linkInput, setLinkInput] = useState({ label: '', url: '' });
   const fileInputRef = useRef(null);
@@ -125,10 +132,14 @@ export default function FormModal({ campaignId, campaigns, onClose, onSave, defa
     setSelAccounts(toSelMap(existing?.ro_accounts));
     setSelBrands(toSelMap(existing?.ro_brands));
     setSelBrandFamilies(toSelMap(existing?.ro_brand_families));
-    setAttachments(existing?.attachments || []);
     setLinks(existing?.links || []);
     setPendingChannelPrefill(defaultRow?.block === 'channel' ? { channel: defaultRow.channel, account: defaultRow.account } : null);
   }, [campaignId, defaultMonth, defaultRow, existing]);
+
+  useEffect(() => {
+    if (!campaignId) { setAttachments([]); return; }
+    attachmentsApi.list(campaignId).then(setAttachments).catch(err => console.error('Failed to load attachments', err));
+  }, [campaignId]);
 
   const isNew = !existing;
 
@@ -415,7 +426,6 @@ export default function FormModal({ campaignId, campaigns, onClose, onSave, defa
       })),
       ro_brands:        Object.entries(selBrands).map(([value, label]) => ({ value, label })),
       ro_brand_families: Object.entries(selBrandFamilies).map(([value, label]) => ({ value, label })),
-      attachments,
       links,
     };
 
@@ -759,33 +769,59 @@ export default function FormModal({ campaignId, campaigns, onClose, onSave, defa
               {/* ── Attachments ── */}
               <div className="field">
                 <label>Attachments</label>
-                <div className="attach-zone" onClick={() => fileInputRef.current.click()}>
-                  <span>📎 Click to upload — images, PDF, PPT, Word</span>
-                  <input ref={fileInputRef} type="file" multiple accept="image/*,.pdf,.ppt,.pptx,.doc,.docx" style={{ display:'none' }}
-                    onChange={e => {
-                      const files = Array.from(e.target.files);
-                      files.forEach(file => {
-                        const reader = new FileReader();
-                        reader.onload = ev => setAttachments(prev => [...prev, {
-                          name: file.name,
-                          type: file.type,
-                          size: file.size,
-                          data: ev.target.result,
-                        }]);
-                        reader.readAsDataURL(file);
-                      });
-                      e.target.value = '';
-                    }}
-                  />
-                </div>
+                {isNew ? (
+                  <div className="attach-zone attach-zone-disabled">
+                    <span>📎 Save the campaign first to add attachments</span>
+                  </div>
+                ) : (
+                  <div className="attach-zone" onClick={() => fileInputRef.current.click()}>
+                    <span>📎 Click to upload — images, PDF, PPT, Word</span>
+                    <input ref={fileInputRef} type="file" multiple accept="image/*,.pdf,.ppt,.pptx,.doc,.docx" style={{ display:'none' }}
+                      onChange={e => {
+                        const files = Array.from(e.target.files);
+                        files.forEach(file => {
+                          attachmentsApi.upload(campaignId, file)
+                            .then(a => setAttachments(prev => [...prev, a]))
+                            .catch(err => console.error('Upload failed', err));
+                        });
+                        e.target.value = '';
+                      }}
+                    />
+                  </div>
+                )}
                 {attachments.length > 0 && (
                   <div className="attach-list">
-                    {attachments.map((f, i) => (
-                      <div key={i} className="attach-item">
-                        <span className="attach-icon">{f.type?.startsWith('image/') ? '🖼️' : f.type?.includes('pdf') ? '📄' : f.type?.includes('presentation') || f.name?.endsWith('.ppt') || f.name?.endsWith('.pptx') ? '📊' : '📝'}</span>
-                        <a href={f.data} download={f.name} className="attach-name">{f.name}</a>
+                    {attachments.map(f => (
+                      <div key={f.id} className="attach-item">
+                        <span className="attach-icon">{f.content_type?.startsWith('image/') ? '🖼️' : f.content_type?.includes('pdf') ? '📄' : f.content_type?.includes('presentation') || f.filename?.endsWith('.ppt') || f.filename?.endsWith('.pptx') ? '📊' : '📝'}</span>
+                        {renamingId === f.id ? (
+                          <input
+                            className="attach-rename-input"
+                            defaultValue={f.filename}
+                            autoFocus
+                            onBlur={e => {
+                              const filename = e.target.value.trim();
+                              setRenamingId(null);
+                              if (!filename || filename === f.filename) return;
+                              attachmentsApi.rename(campaignId, f.id, filename)
+                                .then(updated => setAttachments(prev => prev.map(a => a.id === f.id ? updated : a)))
+                                .catch(err => console.error('Rename failed', err));
+                            }}
+                            onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); if (e.key === 'Escape') setRenamingId(null); }}
+                          />
+                        ) : (
+                          <span className="attach-name-group">
+                            <a href={attachmentsApi.downloadUrl(campaignId, f.id)} className="attach-name">{f.filename}</a>
+                            <button type="button" className="attach-rename" title="Rename" onClick={() => setRenamingId(f.id)}>✎</button>
+                            <span className="attach-meta">{f.uploaded_by} · {formatUploadedAt(f.uploaded_at)}</span>
+                          </span>
+                        )}
                         <span className="attach-size">{f.size ? `${(f.size/1024).toFixed(0)} KB` : ''}</span>
-                        <button type="button" className="attach-remove" onClick={() => setAttachments(prev => prev.filter((_, j) => j !== i))}>✕</button>
+                        <button type="button" className="attach-remove" onClick={() => {
+                          attachmentsApi.remove(campaignId, f.id)
+                            .then(() => setAttachments(prev => prev.filter(a => a.id !== f.id)))
+                            .catch(err => console.error('Delete failed', err));
+                        }}>✕</button>
                       </div>
                     ))}
                   </div>
