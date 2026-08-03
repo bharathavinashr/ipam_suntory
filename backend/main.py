@@ -552,6 +552,7 @@ def get_subchannels(country: str, channel_code: Optional[str] = None, db: Sessio
 @app.get("/api/lookup/accounts")
 def get_accounts(
     country: str,
+    division: Optional[str] = None,
     channel_code: Optional[str] = None,
     subchannel_code: Optional[str] = None,
     db: Session = Depends(get_db),
@@ -562,6 +563,8 @@ def get_accounts(
     ).filter(
         ROCustomer.country.in_(_countries_for(country))
     )
+    if division:
+        query = query.filter(ROCustomer.division == division)
     if channel_code:
         query = query.filter(ROCustomer.channel_code.in_(_split_codes(channel_code)))
     if subchannel_code:

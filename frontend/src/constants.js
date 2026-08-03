@@ -1,10 +1,3 @@
-export const BRANDS_AU_NONALC = ["V Energy","Suntory BOSS Coffee","Maximus","Ribena","Celsius","Pepsi","Gatorade","UP&GO","Lucozade","Rockstar"];
-export const BRANDS_NZ_NONALC = ["V Energy","Suntory BOSS Coffee","Maximus","Ribena","The Real McCoy","Just Juice","Fresh Up","NZ Natural","h2go","Mizone","G Force","UP&GO","Lucozade","Pepsi","Pepsi Max","7UP","Mountain Dew","Gatorade","Rockstar","Celsius"];
-export const BRANDS_AU_ALC = ["Suntory -196","Jim Beam","Maker's Mark","Basil Hayden's","Baker's","Legent","Booker's","Knob Creek","Larios","Yamazaki","Hakushu","Hibiki","Haku","Bowmore","Laphroaig","Ardmore","Auchentoshan","Connemara","Galliano","Cruzan","Chita","Canadian Club","Paraiso","Pavan","Roku","Sipsmith","Sourz","Teacher's"];
-export const BRANDS_NZ_ALC = ["Suntory -196","Jim Beam","Maker's Mark","Basil Hayden's","Baker's","Legent","Booker's","Knob Creek","Larios","Yamazaki","Hakushu","Hibiki","Haku","Bowmore","Laphroaig","Ardmore","Auchentoshan","Connemara","Galliano","Cruzan","Chita","Canadian Club","Paraiso","Pavan","Roku","Sipsmith","Sourz","Stolen","Chatelle","Old Crow","Teacher's"];
-export const CUSTS_NONALC = ["All Customers","Coles Supermarket","Woolworths Supermarket","IGA","7-Eleven","Ampol","BP","EasyMart"];
-export const CUSTS_ALC = ["All Customers","Dan Murphy's","BWS","Liquorland","Cellarbrations","Bottle-O","Bottlemart"];
-
 export const BRAND_CFG = {
   // 100% Solid Base Colors
   "V Energy":           { bg:"#0ECC73", bdr:"#0ECC73", txt:"#000", dot:"#0ECC73" },
@@ -84,22 +77,3 @@ export const tierAcc = (t) => (TIERS[t] || TIERS.Silver).acc;
 export const statusCol = (s) => STATUS_COL[s] || '#6B7280';
 export const fmt = (n) => n >= 1000000 ? `$${(n / 1e6).toFixed(1)}M` : `$${(n / 1000).toFixed(0)}K`;
 
-export const getActiveBrands = (org, category) => {
-  let sets = [];
-  const isAll = !category || category === 'All';
-  if (org === 'AU & NZ' || org === 'AU') {
-    if (isAll || category === 'Non-Alc') sets.push(...BRANDS_AU_NONALC);
-    if (isAll || category === 'Alc') sets.push(...BRANDS_AU_ALC);
-  }
-  if (org === 'AU & NZ' || org === 'NZ') {
-    if (isAll || category === 'Non-Alc') sets.push(...BRANDS_NZ_NONALC);
-    if (isAll || category === 'Alc') sets.push(...BRANDS_NZ_ALC);
-  }
-  return ['All', ...new Set(sets)];
-};
-
-export const getActiveCustomers = (category) => {
-  if (category === 'Alc') return CUSTS_ALC;
-  if (category === 'Non-Alc') return CUSTS_NONALC;
-  return [...new Set([...CUSTS_NONALC, ...CUSTS_ALC])];
-};

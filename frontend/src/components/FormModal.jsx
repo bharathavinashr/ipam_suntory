@@ -378,6 +378,9 @@ export default function FormModal({ campaignId, campaigns, onClose, onSave, defa
     // Brand (drives chip/badge color) no longer has its own dropdown either — use the first
     // selected RO Brand, falling back to matching the campaign name against known brands.
     const derivedBrand = Object.values(selBrands)[0] || matchBrandFromName(form.name);
+    // Customer (drives the FilterBar Customer filter) — use the first selected RO Account,
+    // same pattern as derivedBrand, so it matches the ro_customers.account_name values FilterBar fetches.
+    const derivedCustomer = Object.values(selAccounts)[0] || form.customer || '';
 
     const payload = {
       name:             form.name,
@@ -389,7 +392,7 @@ export default function FormModal({ campaignId, campaigns, onClose, onSave, defa
       priority_number:  form.priority_number   || '',
       estimated_execution_date: form.estimated_execution_date || '',
       channel:          form.channel          || '',
-      customer:         form.customer         || '',
+      customer:         derivedCustomer,
       campaign_category: form.campaign_category || '',
       market:           derivedMarket,
       category:         derivedCategory,
