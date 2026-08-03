@@ -502,6 +502,7 @@ h1,h2,h3,h4,h5,h6{font-family:'Jost',Arial,sans-serif;font-weight:500}
   transition: border-color .15s, background .15s;
 }
 .attach-zone:hover { border-color: #6366f1; background: #f5f3ff; color: #6366f1; }
+.attach-zone-dragover { border-color: #6366f1; background: #f5f3ff; color: #6366f1; border-style: solid; }
 
 .attach-list { display: flex; flex-direction: column; gap: 5px; margin-top: 8px; }
 

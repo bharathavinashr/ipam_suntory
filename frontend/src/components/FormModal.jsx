@@ -120,9 +120,18 @@ export default function FormModal({ campaignId, campaigns, onClose, onSave, defa
 
   const [attachments, setAttachments] = useState([]);
   const [renamingId, setRenamingId] = useState(null);
+  const [isDraggingFile, setIsDraggingFile] = useState(false);
   const [links, setLinks] = useState(() => existing?.links || []);
   const [linkInput, setLinkInput] = useState({ label: '', url: '' });
   const fileInputRef = useRef(null);
+
+  const uploadFiles = (fileList) => {
+    Array.from(fileList).forEach(file => {
+      attachmentsApi.upload(campaignId, file)
+        .then(a => setAttachments(prev => [...prev, a]))
+        .catch(err => console.error('Upload failed', err));
+    });
+  };
 
   useEffect(() => {
     restoringRef.current = true;
@@ -774,16 +783,21 @@ export default function FormModal({ campaignId, campaigns, onClose, onSave, defa
                     <span>📎 Save the campaign first to add attachments</span>
                   </div>
                 ) : (
-                  <div className="attach-zone" onClick={() => fileInputRef.current.click()}>
-                    <span>📎 Click to upload — images, PDF, PPT, Word</span>
+                  <div
+                    className={`attach-zone ${isDraggingFile ? 'attach-zone-dragover' : ''}`}
+                    onClick={() => fileInputRef.current.click()}
+                    onDragOver={e => { e.preventDefault(); setIsDraggingFile(true); }}
+                    onDragLeave={() => setIsDraggingFile(false)}
+                    onDrop={e => {
+                      e.preventDefault();
+                      setIsDraggingFile(false);
+                      uploadFiles(e.dataTransfer.files);
+                    }}
+                  >
+                    <span>📎 Click to upload or drag and drop — images, PDF, PPT, Word</span>
                     <input ref={fileInputRef} type="file" multiple accept="image/*,.pdf,.ppt,.pptx,.doc,.docx" style={{ display:'none' }}
                       onChange={e => {
-                        const files = Array.from(e.target.files);
-                        files.forEach(file => {
-                          attachmentsApi.upload(campaignId, file)
-                            .then(a => setAttachments(prev => [...prev, a]))
-                            .catch(err => console.error('Upload failed', err));
-                        });
+                        uploadFiles(e.target.files);
                         e.target.value = '';
                       }}
                     />
