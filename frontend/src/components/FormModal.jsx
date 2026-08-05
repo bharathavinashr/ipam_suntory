@@ -536,7 +536,7 @@ export default function FormModal({ campaignId, campaigns, onClose, onSave, defa
                   <label>Channel</label>
                   <div className="multi-combo" onClick={() => form.ro_country && setChannelOpen(o => !o)}>
                     <span className={Object.keys(selChannels).length ? '' : 'placeholder'}>{multiLabel(selChannels, 'Select channels')}</span>
-                    <span className="combo-arrow">&#9662;</span>
+                    <svg className="combo-arrow chevron-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9" /></svg>
                   </div>
                   {channelOpen && (
                     <div className="combo-dropdown">
@@ -564,7 +564,7 @@ export default function FormModal({ campaignId, campaigns, onClose, onSave, defa
                   <label>Sub Channel</label>
                   <div className="multi-combo" onClick={() => form.ro_country && setSubChannelOpen(o => !o)}>
                     <span className={Object.keys(selSubChannels).length ? '' : 'placeholder'}>{multiLabel(selSubChannels, 'Select sub-channels')}</span>
-                    <span className="combo-arrow">&#9662;</span>
+                    <svg className="combo-arrow chevron-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9" /></svg>
                   </div>
                   {subChannelOpen && (
                     <div className="combo-dropdown">
@@ -585,7 +585,7 @@ export default function FormModal({ campaignId, campaigns, onClose, onSave, defa
                   <label>Brand</label>
                   <div className="multi-combo" onClick={() => (form.division && form.ro_country) && setBrandOpen(o => !o)}>
                     <span className={Object.keys(selBrands).length ? '' : 'placeholder'}>{multiLabel(selBrands, 'Select brands')}</span>
-                    <span className="combo-arrow">&#9662;</span>
+                    <svg className="combo-arrow chevron-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9" /></svg>
                   </div>
                   {brandOpen && (
                     <div className="combo-dropdown">
@@ -606,7 +606,7 @@ export default function FormModal({ campaignId, campaigns, onClose, onSave, defa
                   <label>Account</label>
                   <div className="multi-combo" onClick={() => form.ro_country && setAccountOpen(o => !o)}>
                     <span className={Object.keys(selAccounts).length ? '' : 'placeholder'}>{multiLabel(selAccounts, 'Select accounts')}</span>
-                    <span className="combo-arrow">&#9662;</span>
+                    <svg className="combo-arrow chevron-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9" /></svg>
                   </div>
                   {accountOpen && (
                     <div className="combo-dropdown">
@@ -627,7 +627,7 @@ export default function FormModal({ campaignId, campaigns, onClose, onSave, defa
                   <label>Brand Family</label>
                   <div className="multi-combo" onClick={() => (form.division && form.ro_country) && setBrandFamilyOpen(o => !o)}>
                     <span className={Object.keys(selBrandFamilies).length ? '' : 'placeholder'}>{multiLabel(selBrandFamilies, 'Select brand families')}</span>
-                    <span className="combo-arrow">&#9662;</span>
+                    <svg className="combo-arrow chevron-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9" /></svg>
                   </div>
                   {brandFamilyOpen && (
                     <div className="combo-dropdown">
