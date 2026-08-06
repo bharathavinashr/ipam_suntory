@@ -34,17 +34,17 @@ export default function DetailModal({ campaign: c, onClose, onEdit, onDelete }) 
         <div className="detail-header" style={{ background: `linear-gradient(135deg,${bcfg.bg}50,transparent 60%)` }}>
           <div className="detail-close">
             {canEdit && (
-              <button className="close-btn" style={{ background:'#1E3A5F', border:'1px solid #1D4ED8', color:'#60A5FA', width:'auto', padding:'0 13px', fontSize:11, fontWeight:700 }}
+              <button className="close-btn" style={{ background:'#1E3A5F', border:'1px solid #1D4ED8', color:'#60A5FA', width:'auto', padding:'0 13px', fontSize:11, fontWeight: 500 }}
                 onClick={() => { onEdit(c.id); onClose(); }}>✏️ Edit</button>
             )}
             {canDelete && (
-              <button className="close-btn" style={{ background:'#3B0A0A', border:'1px solid #7F1D1D', color:'#FCA5A5', width:'auto', padding:'0 13px', fontSize:11, fontWeight:700 }}
+              <button className="close-btn" style={{ background:'#3B0A0A', border:'1px solid #7F1D1D', color:'#FCA5A5', width:'auto', padding:'0 13px', fontSize:11, fontWeight: 500 }}
                 onClick={() => { onDelete(c.id); onClose(); }}>🗑️ Delete</button>
             )}
             <button className="close-btn" onClick={onClose}>✕</button>
           </div>
           <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginBottom:8 }}>
-            <span style={{ fontSize:9, color:'#475569', fontWeight:700 }}>{c.id}</span>
+            <span style={{ fontSize:9, color:'#475569', fontWeight: 500 }}>{c.id}</span>
             <TierBadge tier={c.tier} />
             <BrandBadge brand={c.brand} />
             <StatusBadge status={c.status} />
@@ -119,7 +119,7 @@ function OverviewTab({ c, canEdit, tc }) {
       <div className="grid-2">
         <div className="mini-card">
           <div className="section-label">Analytics Tier Weight</div>
-          <div style={{ fontSize:28, fontWeight:800, color:tc.acc, fontFamily:"'Syne',sans-serif" }}>
+          <div style={{ fontSize:28, fontWeight: 500, color:tc.acc }}>
             {(({ Platinum:1000, Gold:700, Silver:300, Bronze:50 })[c.tier] || 300).toLocaleString()}
           </div>
           <div style={{ fontSize:9, color:'#475569', marginTop:2 }}>{c.tier} · au_iap_calendar</div>
@@ -177,7 +177,7 @@ function ReviewTab({ c }) {
           <span style={{ fontSize:11, color:'#64748B', marginLeft:8 }}>{c.review_score}/5 · 13-Week Review</span>
         </div>
         <div className="mini-card">
-          <div style={{ fontSize:11, color:'#10B981', fontWeight:700 }}>✓ Review completed · {c.review_due}</div>
+          <div style={{ fontSize:11, color:'#10B981', fontWeight: 500 }}>✓ Review completed · {c.review_due}</div>
         </div>
       </div>
     );
@@ -185,7 +185,7 @@ function ReviewTab({ c }) {
   return (
     <div className="review-empty">
       <div style={{ fontSize:36, marginBottom:10 }}>📋</div>
-      <div style={{ fontSize:13, fontWeight:600, color:'#64748B', marginBottom:5 }}>Review Not Yet Completed</div>
+      <div style={{ fontSize:13, fontWeight: 500, color:'#64748B', marginBottom:5 }}>Review Not Yet Completed</div>
       <div style={{ fontSize:10, color:'#475569' }}>Due: {c.review_due}</div>
     </div>
   );

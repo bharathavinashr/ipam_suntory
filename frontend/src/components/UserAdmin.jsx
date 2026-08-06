@@ -64,7 +64,7 @@ export default function UserAdmin({ onClose }) {
     <div className="modal-backdrop" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="modal-box" style={{ maxWidth: 720 }} onClick={e => e.stopPropagation()}>
         <div className="detail-tabs" style={{ justifyContent: 'space-between', alignItems: 'center', padding: '14px 26px' }}>
-          <span style={{ fontSize: 13, fontWeight: 700 }}>Manage Users</span>
+          <span style={{ fontSize: 13, fontWeight: 500, fontFamily: "'Jost', Arial, sans-serif" }}>Manage Users</span>
           <button className="close-btn" onClick={onClose}>✕</button>
         </div>
 

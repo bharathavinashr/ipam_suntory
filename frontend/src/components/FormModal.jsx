@@ -373,7 +373,8 @@ export default function FormModal({ campaignId, campaigns, onClose, onSave, defa
 
     // Market/Category no longer have their own dropdowns (see Division/Country below) —
     // derive them so campaigns still match the AU/NZ + Alc/Non-Alc filters used everywhere else.
-    const derivedMarket = /new zealand/i.test(form.ro_country || '') ? 'NZ' : 'AU';
+    const derivedMarket = form.ro_country === 'ANZ' ? 'ANZ'
+      : /new zealand/i.test(form.ro_country || '') ? 'NZ' : 'AU';
     const derivedCategory = form.division === 'Alcohol' ? 'Alc' : 'Non-Alc';
     // Brand (drives chip/badge color) no longer has its own dropdown either — use the first
     // selected RO Brand, falling back to matching the campaign name against known brands.
@@ -458,7 +459,7 @@ export default function FormModal({ campaignId, campaigns, onClose, onSave, defa
           </div>
           <div style={{ display:'flex', gap:8, alignItems:'center' }}>
             <div className="preview-chip" style={{ background:bcfg.bg, border:`1px solid ${bcfg.bdr}` }}>
-              <div style={{ fontSize:10, fontWeight:700, color:bcfg.txt }}>{form.name || 'Campaign name'}</div>
+              <div style={{ fontSize:10, fontWeight: 500, color:bcfg.txt }}>{form.name || 'Campaign name'}</div>
               <div style={{ fontSize:8, opacity:.7, color:bcfg.txt }}>{previewBrand} · {form.tier}</div>
             </div>
             <button className="close-btn" onClick={onClose}>✕</button>
@@ -880,9 +881,9 @@ export default function FormModal({ campaignId, campaigns, onClose, onSave, defa
               <div style={{ fontSize: 11, color: '#64748b', marginBottom: 6 }}>Track the progress of key delivery dates for this campaign.</div>
               {form.milestones.map((m, i) => (
                 <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'center', background: '#f9fafb', padding: '10px 14px', borderRadius: 8, border: '1px solid #e5e7eb' }}>
-                  <div style={{ flex: 1, fontWeight: 600, fontSize: 12, color: '#334155' }}>{m.l}</div>
-                  <input type="date" value={m.d} onChange={e => updateMilestone(i, 'd', e.target.value)} 
-                    style={{ width: 130, background: '#fff', border: '1px solid #d1d5db', borderRadius: 6, padding: '6px 8px', fontSize: 11, fontFamily: 'Jost' }} />
+                  <div style={{ flex: 1, fontWeight: 500, fontSize: 12, color: '#334155' }}>{m.l}</div>
+                  <input type="date" value={m.d} onChange={e => updateMilestone(i, 'd', e.target.value)}
+                    style={{ width: 130, background: '#fff', border: '1px solid #d1d5db', borderRadius: 6, padding: '6px 8px', fontSize: 11 }} />
                   <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 12, fontWeight: 500, color: m.done ? '#10b981' : '#64748b' }}>
                     <input type="checkbox" checked={m.done} onChange={e => updateMilestone(i, 'done', e.target.checked)} style={{ width: 16, height: 16, accentColor: '#10b981' }} />
                     Done
@@ -902,7 +903,7 @@ export default function FormModal({ campaignId, campaigns, onClose, onSave, defa
               </Field>
 
               <div className="field">
-                <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600, color: form.reviewed ? '#10b981' : '#334155', textTransform: 'none' }}>
+                <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, fontWeight: 500, color: form.reviewed ? '#10b981' : '#334155', textTransform: 'none' }}>
                   <input type="checkbox" checked={form.reviewed} onChange={e => set('reviewed', e.target.checked)} style={{ width: 18, height: 18, accentColor: '#10b981' }} />
                   13-Week Review Completed
                 </label>

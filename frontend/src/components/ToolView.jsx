@@ -100,7 +100,7 @@ function CampaignCard({ campaign: c, onOpenDetail, onOpenForm, canEdit }) {
         </div>
         <div style={{ textAlign:'right' }}>
           <div style={{ fontSize:7, color:'#475569', letterSpacing:'.08em', marginBottom:2 }}>Budget</div>
-          <div style={{ fontSize:12, fontWeight:700 }}>{fmt(c.budget)}</div>
+          <div style={{ fontSize:12, fontWeight: 500 }}>{fmt(c.budget)}</div>
         </div>
       </div>
       <ProgressBar milestones={c.milestones || []} tier={c.tier} />

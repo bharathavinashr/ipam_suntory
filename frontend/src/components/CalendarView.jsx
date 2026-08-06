@@ -3,6 +3,47 @@ import { PERIODS, ALL_MONTHS, TIERS, bc, getCalendarLeftColumns } from '../const
 import { buildDynamicRowGroups, packLanes } from '../lib/calendarBlocks';
 import { useAuth } from '../context/AuthContext';
 
+// Shared offscreen canvas for measuring rendered text width (matches the actual font used
+// on-screen, so computed column widths track real content instead of a guessed char count).
+let measureCanvasCtx = null;
+function textWidth(text, font) {
+  if (!measureCanvasCtx) measureCanvasCtx = document.createElement('canvas').getContext('2d');
+  measureCanvasCtx.font = font;
+  return measureCanvasCtx.measureText(text).width;
+}
+
+const LEFT_CELL_FONT = '700 9px "Work Sans", Arial, sans-serif';
+const LEFT_HEADER_FONT = '700 8px "Work Sans", Arial, sans-serif';
+const LEFT_CELL_H_PADDING = 16; // .cal-left-cell padding: 3px 8px (left + right)
+const LEFT_HEADER_H_PADDING = 14; // .cal-th-section padding: 3px 7px (left + right)
+const TIER_INFO_ICON_WIDTH = 26; // info-icon bubble + gap shown next to rowDetail on tier rows
+const LEFT_COLUMN_MIN_WIDTH = 70;
+
+// Sizes each left column to fit the longest label it will actually render (header included),
+// instead of a fixed guess — so e.g. a long channel or account name doesn't get clipped and a
+// short one doesn't waste space.
+function computeLeftColumnWidths(leftColumns, rowGroups) {
+  return leftColumns.map(col => {
+    let widest = textWidth(col.label, LEFT_HEADER_FONT) + LEFT_HEADER_H_PADDING;
+    rowGroups.forEach(group => {
+      group.rows.forEach(row => {
+        let text = '';
+        if (col.key === 'section') text = row.section || group.sec || '';
+        if (col.key === 'categoryOrChannel') text = row.categoryOrChannel || '';
+        if (col.key === 'rowDetail') text = row.rowDetail || row.l || '';
+        if (!text) return;
+
+        let w = textWidth(text, LEFT_CELL_FONT) + LEFT_CELL_H_PADDING;
+        if (col.key === 'rowDetail' && Object.keys(TIERS).some(k => k.toUpperCase() === row.k.toUpperCase())) {
+          w += TIER_INFO_ICON_WIDTH;
+        }
+        if (w > widest) widest = w;
+      });
+    });
+    return Math.ceil(Math.max(LEFT_COLUMN_MIN_WIDTH, widest));
+  });
+}
+
 // Row -> the field(s) that must change for a campaign to move into that row when dropped
 // there. Row placement is derived from campaign data (see calendarBlocks.js), so "moving"
 // a campaign to a different row means editing the underlying field, not a row-membership list.
@@ -38,14 +79,14 @@ function canEditCalendar(role) {
 export default function CalendarView({ campaigns, filters, onOpenDetail, onOpenForm, onSave, showWeeks }) {
   const { userRole } = useAuth();
   const canEdit = canEditCalendar(userRole);
-  const market = filters.org === 'NZ' ? 'NZ' : 'AU';
+  const market = filters.org === 'NZ' ? 'NZ' : filters.org === 'ANZ' ? 'ANZ' : 'AU';
   const leftColumns = getCalendarLeftColumns();
-  const leftColumnWidths = [160, 170, 170];
+  const rowGroups = useMemo(() => buildDynamicRowGroups(campaigns), [campaigns]);
+  const leftColumnWidths = useMemo(() => computeLeftColumnWidths(leftColumns, rowGroups), [leftColumns, rowGroups]);
   const leftColumnOffsets = leftColumnWidths.reduce((acc, width, idx) => {
     if (idx === 0) return [0];
     return [...acc, acc[idx - 1] + leftColumnWidths[idx - 1]];
   }, []);
-  const rowGroups = useMemo(() => buildDynamicRowGroups(campaigns), [campaigns]);
   const dragRef = useRef(null);
   
   const [dropTarget, setDropTarget] = useState(null); // { rowKey, timeKey }
@@ -253,7 +294,7 @@ export default function CalendarView({ campaigns, filters, onOpenDetail, onOpenF
                     </th>
                   ))}
                   {ALL_WEEKS.map(w => (
-                    <th key={w.k} style={{ textAlign: 'center', background: '#f8fafc', color: '#374151', fontSize: '11px', fontWeight: 'bold', border: '1px solid #e5e7eb', padding: '4px' }}>
+                    <th key={w.k} style={{ textAlign: 'center', background: '#f8fafc', color: '#374151', fontSize: '11px', fontWeight: 500, border: '1px solid #e5e7eb', padding: '4px' }}>
                       {w.weekLabel}
                     </th>
                   ))}
@@ -263,7 +304,7 @@ export default function CalendarView({ campaigns, filters, onOpenDetail, onOpenF
                     <th key={`${col.key}-h-d`} className="cal-th-section" style={{ position: 'sticky', left: leftColumnOffsets[idx], zIndex: 4 + idx, background: '#f3f4f6' }}></th>
                   ))}
                   {ALL_WEEKS.map(w => (
-                    <th key={`${w.k}-date`} style={{ textAlign: 'center', background: '#ffffff', color: '#6b7280', fontSize: '11px', fontWeight: '600', border: '1px solid #e5e7eb', padding: '6px' }}>
+                    <th key={`${w.k}-date`} style={{ textAlign: 'center', background: '#ffffff', color: '#6b7280', fontSize: '11px', fontWeight: 500, border: '1px solid #e5e7eb', padding: '6px' }}>
                       {w.dateLabel}
                     </th>
                   ))}
@@ -434,7 +475,7 @@ export default function CalendarView({ campaigns, filters, onOpenDetail, onOpenF
                               maxWidth: leftColumnWidths[idx],
                               whiteSpace: 'nowrap',
                               borderTop: (col.key === 'section' ? sectionLabelCell > 0 : categoryLabelCell > 0) ? '1px solid #e5e7eb' : '1px solid transparent',
-                              fontWeight: (col.key === 'section' ? sectionLabelCell > 0 : (col.key === 'categoryOrChannel' ? categoryLabelCell > 0 : true)) ? 700 : 500,
+                              fontWeight: 500,
                             }}
                           >
                             {col.key === 'rowDetail' && tierConfig ? (
@@ -457,7 +498,7 @@ export default function CalendarView({ campaigns, filters, onOpenDetail, onOpenF
       </div>
       <div className="cal-legend">
         <div className="spacer"></div>
-        <span style={{ fontSize: 8, color: '#1E293B' }}>budmp_sbfo_dev.data_science.{market.toLowerCase()}_iap_calendar</span>
+        {/* <span style={{ fontSize: 8, color: '#1E293B' }}>budmp_sbfo_dev.data_science.{market.toLowerCase()}_iap_calendar</span> */}
       </div>
     </div>
   );

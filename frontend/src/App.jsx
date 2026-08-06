@@ -18,7 +18,7 @@ export default function App() {
   const [showWeeks, setShowWeeks] = useState(false);
   const [dnOpen, setDnOpen] = useState(false);
   const [usersOpen, setUsersOpen] = useState(false);
-  const [filters, setFilters] = useState({ org:'AU', category:'All', brand:['All'], customer:['All'] });
+  const [filters, setFilters] = useState({ org:'AU', category:'All', brand:['All'], customer:['All'], channel:['All'] });
   const [detailCampaign, setDetailCampaign] = useState(null);
   const [formCampaignId, setFormCampaignId] = useState(undefined);   // undefined=closed, null=new, string=edit
   const [formDefaultMonth, setFormDefaultMonth] = useState(null);
@@ -42,17 +42,25 @@ export default function App() {
   }, []);
 
   const filteredCampaigns = useMemo(() => {
-    const market = filters.org === 'NZ' ? 'NZ' : 'AU';
+    const market = filters.org === 'NZ' ? 'NZ' : filters.org === 'ANZ' ? 'ANZ' : 'AU';
     const brandArr = Array.isArray(filters.brand) ? filters.brand : [filters.brand];
     const custArr = Array.isArray(filters.customer) ? filters.customer : [filters.customer];
+    const chanArr = Array.isArray(filters.channel) ? filters.channel : [filters.channel];
     const brandAll = brandArr.includes('All') || brandArr.length === 0;
     const custAll = custArr.includes('All') || custArr.length === 0;
-  
+    const chanAll = chanArr.includes('All') || chanArr.length === 0;
+
     return campaigns.filter(c => {
       if (c.market?.toUpperCase() !== market) return false;
       if (filters.category !== 'All' && c.category !== filters.category) return false;
       if (!brandAll && !brandArr.includes(c.brand)) return false;
       if (!custAll && !custArr.includes(c.customer)) return false;
+      if (!chanAll) {
+        // A campaign can carry multiple RO channels; ro_channels is the source of truth,
+        // with the legacy flat `channel` field as fallback for campaigns saved without it.
+        const campaignChannels = c.ro_channels?.length ? c.ro_channels.map(ch => ch.label) : (c.channel ? [c.channel] : []);
+        if (!campaignChannels.some(ch => chanArr.includes(ch))) return false;
+      }
       return true;
     });
   }, [campaigns, filters]);

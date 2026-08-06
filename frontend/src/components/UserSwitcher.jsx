@@ -9,7 +9,7 @@ export default function UserSwitcher() {
 
   return (
     <div className="user-switcher" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-      <span style={{ fontSize: 10, color: '#94A3B8', fontWeight: 700 }}>Act as</span>
+      <span style={{ fontSize: 10, color: '#94A3B8', fontWeight: 500 }}>Act as</span>
       <select
         value={currentUser?.email || ''}
         onChange={e => actAs(e.target.value)}

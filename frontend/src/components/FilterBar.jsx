@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { lookupApi } from '../api';
 
-const ORG_TO_COUNTRY = { AU: 'Australia', NZ: 'New Zealand' };
+const ORG_TO_COUNTRY = { AU: 'Australia', NZ: 'New Zealand', ANZ: 'ANZ' };
 const CATEGORY_TO_DIVISIONS = {
   All: ['Alcohol', 'Non-Alcohol'],
   Alc: ['Alcohol'],
@@ -95,6 +95,7 @@ function MultiSelect({ label, options, selected, onChange, placeholder }) {
 export default function FilterBar({ filters, setFilters, showWeeks, setShowWeeks }) {
   const [brands, setBrands] = useState([]);
   const [customers, setCustomers] = useState([]);
+  const [channels, setChannels] = useState([]);
 
   // Brand options come from ro_products.brand_name, scoped to the selected country + category
   // (mirrors the Brand lookup used in the campaign form's FormModal).
@@ -128,17 +129,32 @@ export default function FilterBar({ filters, setFilters, showWeeks, setShowWeeks
     return () => { cancelled = true; };
   }, [filters.org, filters.category]);
 
+  // Channel options come from ro_customers.channel_name, scoped to the selected country
+  // (mirrors the RO Channel lookup used in the campaign form's FormModal; channels aren't
+  // division-scoped, so no category-based re-fetch is needed here).
+  useEffect(() => {
+    const country = ORG_TO_COUNTRY[filters.org] || ORG_TO_COUNTRY.AU;
+
+    let cancelled = false;
+    lookupApi.getChannels(country)
+      .then(d => { if (!cancelled) setChannels((d.options || []).map(o => o.label).sort((a, b) => a.localeCompare(b))); })
+      .catch(() => { if (!cancelled) setChannels([]); });
+
+    return () => { cancelled = true; };
+  }, [filters.org]);
+
   const selectedBrands = Array.isArray(filters.brand) ? filters.brand : [filters.brand || 'All'];
   const selectedCustomers = Array.isArray(filters.customer) ? filters.customer : [filters.customer || 'All'];
+  const selectedChannels = Array.isArray(filters.channel) ? filters.channel : [filters.channel || 'All'];
 
-  const setOrg = (val) => setFilters(f => ({ ...f, org: val, brand: ['All'], customer: ['All'] }));
+  const setOrg = (val) => setFilters(f => ({ ...f, org: val, brand: ['All'], customer: ['All'], channel: ['All'] }));
   const setCat = (val) => setFilters(f => ({ ...f, category: f.category === val ? 'All' : val, brand: ['All'], customer: ['All'] }));
 
   return (
     <div id="filterbar">
       <span className="filter-label">Country</span>
       <div className="chip-group">
-        {['AU', 'NZ'].map(o => {
+        {['AU', 'NZ', 'ANZ'].map(o => {
           const active = filters.org === o;
           return (
             <button 
@@ -183,14 +199,22 @@ export default function FilterBar({ filters, setFilters, showWeeks, setShowWeeks
         selected={selectedCustomers}
         onChange={val => setFilters(f => ({ ...f, customer: val }))}
       />
-      
+      <div className="nav-divider"></div>
+      <span className="filter-label">Channel</span>
+      <MultiSelect
+        placeholder="All Channels"
+        options={channels}
+        selected={selectedChannels}
+        onChange={val => setFilters(f => ({ ...f, channel: val }))}
+      />
+
       <div className="spacer"></div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
         <button
           className={`chip ${showWeeks ? 'active' : ''}`}
           onClick={() => setShowWeeks(!showWeeks)}
-          style={{ fontWeight: 600 }}
+          style={{ fontWeight: 500 }}
         >
           {showWeeks ? '📅 Months View' : '📆 Weeks View'}
         </button>
