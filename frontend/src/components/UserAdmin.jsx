@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { usersApi } from '../api';
 import { useAuth } from '../context/AuthContext';
 
@@ -16,6 +16,10 @@ export default function UserAdmin({ onClose }) {
   const [form, setForm] = useState(emptyForm);
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    refreshUsers().catch(err => setError(err?.detail || 'Failed to load users'));
+  }, [refreshUsers]);
 
   const handleCreate = async (e) => {
     e.preventDefault();
