@@ -1,6 +1,4 @@
-import { ALL_MONTHS, TIERS, CATEGORY_OPTIONS } from '../constants';
-
-const MONTH_INDEX = Object.fromEntries(ALL_MONTHS.map((m, i) => [m.k, i]));
+import { TIERS, CATEGORY_OPTIONS } from '../constants';
 
 // Greedy interval packing: assigns each campaign to the first lane whose existing
 // occupants don't overlap it in time. Shared by row generation (to size Block 3) and by
@@ -16,9 +14,9 @@ export function packLanes(items) {
   return lanes;
 }
 
-function monthSpan(campaign) {
-  let si = MONTH_INDEX[campaign.start_month];
-  let ei = MONTH_INDEX[campaign.end_month];
+function monthSpan(campaign, monthIndex) {
+  let si = monthIndex[campaign.start_month];
+  let ei = monthIndex[campaign.end_month];
   if (si === undefined) si = 0;
   if (ei === undefined) ei = si;
   if (ei < si) ei = si;
@@ -71,7 +69,9 @@ function channelAccountPairs(c) {
 // Builds the 3 calendar blocks (Category, Priority, Channel & Account) from live campaign
 // data instead of a hardcoded row list. A campaign appears in a block purely because its
 // fields (campaign_category / tier / channel+account) say so — no manual row bookkeeping.
-export function buildDynamicRowGroups(campaigns) {
+export function buildDynamicRowGroups(campaigns, allMonths) {
+  const monthIndex = Object.fromEntries(allMonths.map((m, i) => [m.k, i]));
+
   const categoryRows = CATEGORY_OPTIONS.map(value => ({
     id: `CAT::${value}`,
     k: `CAT::${value}`,
@@ -138,7 +138,7 @@ export function buildDynamicRowGroups(campaigns) {
     });
 
     [...accounts.keys()].sort((a, b) => a.localeCompare(b)).forEach(account => {
-      const items = accounts.get(account).map(c => ({ ...monthSpan(c), campaign: c }));
+      const items = accounts.get(account).map(c => ({ ...monthSpan(c, monthIndex), campaign: c }));
       const lanes = packLanes(items);
       lanes.forEach((lane, laneIdx) => {
         const slot = laneIdx + 1;

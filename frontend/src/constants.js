@@ -42,16 +42,58 @@ export const STATUS_COL = {
   "Published": "#06B6D4",
 };
 
-export const PERIODS = [
-  { q:"Q3 2026", months:[{k:"jul26",l:"J",f:"Jul 26"},{k:"aug26",l:"A",f:"Aug 26"},{k:"sep26",l:"S",f:"Sep 26"}] },
-  { q:"Q4 2026", months:[{k:"oct26",l:"O",f:"Oct 26"},{k:"nov26",l:"N",f:"Nov 26"},{k:"dec26",l:"D",f:"Dec 26"}] },
-  { q:"Q1 2027", months:[{k:"jan27",l:"J",f:"Jan 27"},{k:"feb27",l:"F",f:"Feb 27"},{k:"mar27",l:"M",f:"Mar 27"}] },
-  { q:"Q2 2027", months:[{k:"apr27",l:"A",f:"Apr 27"},{k:"may27",l:"M",f:"May 27"},{k:"jun27",l:"J",f:"Jun 27"}] },
-  { q:"Q3 2027", months:[{k:"jul27",l:"J",f:"Jul 27"},{k:"aug27",l:"A",f:"Aug 27"},{k:"sep27",l:"S",f:"Sep 27"}] },
-  { q:"Q4 2027", months:[{k:"oct27",l:"O",f:"Oct 27"},{k:"nov27",l:"N",f:"Nov 27"},{k:"dec27",l:"D",f:"Dec 27"}] },
-];
+const MONTH_ABBR = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
+const MONTH_LETTER = ['J','F','M','A','M','J','J','A','S','O','N','D'];
+const MONTH_TITLE = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
-export const ALL_MONTHS = PERIODS.flatMap(p => p.months);
+function monthEntry(year, monthIdx) {
+  const yy = String(year).slice(-2);
+  return { k: `${MONTH_ABBR[monthIdx]}${yy}`, l: MONTH_LETTER[monthIdx], f: `${MONTH_TITLE[monthIdx]} ${yy}` };
+}
+
+// Generates one PERIODS-shaped entry per quarter from (fromYear,fromQ) to (toYear,toQ)
+// inclusive, where q is 0-indexed (0 = Q1 .. 3 = Q4).
+function quartersInRange(fromYear, fromQ, toYear, toQ) {
+  const out = [];
+  let y = fromYear, q = fromQ;
+  while (y < toYear || (y === toYear && q <= toQ)) {
+    out.push({ q: `Q${q + 1} ${y}`, months: [0, 1, 2].map(off => monthEntry(y, q * 3 + off)) });
+    q++;
+    if (q > 3) { q = 0; y++; }
+  }
+  return out;
+}
+
+function monthKeyToYearQuarter(key) {
+  const abbr = (key || '').slice(0, 3).toLowerCase();
+  const yy = (key || '').slice(3, 5);
+  const monthIdx = MONTH_ABBR.indexOf(abbr);
+  if (monthIdx === -1 || yy.length !== 2 || isNaN(yy)) return null;
+  return { year: 2000 + parseInt(yy, 10), q: Math.floor(monthIdx / 3) };
+}
+
+// Default visible range when no campaign data pushes it wider.
+const DEFAULT_RANGE_START = { year: 2026, q: 2 }; // Q3 2026
+const DEFAULT_RANGE_END = { year: 2027, q: 3 };   // Q4 2027
+
+// Builds the calendar's quarter/month headers from live campaign data instead of a fixed
+// window, so a backfilled campaign outside the default range (e.g. a 20-Jan-2026 start
+// date) grows the calendar to include Q1 2026 rather than being silently unrenderable.
+export function buildPeriods(campaigns = []) {
+  let earliest = DEFAULT_RANGE_START;
+  let latest = DEFAULT_RANGE_END;
+
+  campaigns.forEach(c => {
+    [c.start_month, c.end_month].forEach(key => {
+      const yq = monthKeyToYearQuarter(key);
+      if (!yq) return;
+      if (yq.year < earliest.year || (yq.year === earliest.year && yq.q < earliest.q)) earliest = yq;
+      if (yq.year > latest.year || (yq.year === latest.year && yq.q > latest.q)) latest = yq;
+    });
+  });
+
+  return quartersInRange(earliest.year, earliest.q, latest.year, latest.q);
+}
 
 // Unified 3-column left header for the calendar table — same for AU and NZ since both
 // now render the same dynamic 3-block model (see lib/calendarBlocks.js).

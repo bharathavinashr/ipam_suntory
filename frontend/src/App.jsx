@@ -79,6 +79,12 @@ export default function App() {
     setFormDefaultRow(null);
   };
 
+  const handleCreateFromCell = (row, monthKey) => {
+    setFormCampaignId(null);
+    setFormDefaultMonth(monthKey);
+    setFormDefaultRow(row);
+  };
+
   const handleSave = async (payload, isNew, campaignId) => {
     try {
       if (isNew) {
@@ -130,6 +136,7 @@ export default function App() {
           ? <CalendarView campaigns={filteredCampaigns} filters={filters}
               onOpenDetail={setDetailCampaign}
               onSave={handleSave}
+              onCreateCampaign={handleCreateFromCell}
               showWeeks={showWeeks} />
           : <ToolView campaigns={filteredCampaigns}
               onOpenDetail={setDetailCampaign} onOpenForm={setFormCampaignId} />

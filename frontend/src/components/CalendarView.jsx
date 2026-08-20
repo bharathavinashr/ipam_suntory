@@ -1,5 +1,5 @@
 import { useState, useRef, useMemo } from 'react';
-import { PERIODS, ALL_MONTHS, TIERS, bc, getCalendarLeftColumns } from '../constants';
+import { buildPeriods, TIERS, bc, getCalendarLeftColumns } from '../constants';
 import { buildDynamicRowGroups, packLanes } from '../lib/calendarBlocks';
 import { useAuth } from '../context/AuthContext';
 
@@ -76,12 +76,16 @@ function canEditCalendar(role) {
   return role === 'System Admin' || role === 'User' || role === 'Approver';
 }
 
-export default function CalendarView({ campaigns, filters, onOpenDetail, onSave, showWeeks }) {
+export default function CalendarView({ campaigns, filters, onOpenDetail, onSave, onCreateCampaign, showWeeks }) {
   const { userRole } = useAuth();
   const canEdit = canEditCalendar(userRole);
   const market = filters.org === 'NZ' ? 'NZ' : filters.org === 'ANZ' ? 'ANZ' : 'AU';
   const leftColumns = getCalendarLeftColumns();
-  const rowGroups = useMemo(() => buildDynamicRowGroups(campaigns), [campaigns]);
+  // Widens dynamically to include any quarter a campaign's start/end month falls in
+  // (e.g. a backfilled Jan-2026 campaign grows this to include Q1 2026).
+  const periods = useMemo(() => buildPeriods(campaigns), [campaigns]);
+  const allMonths = useMemo(() => periods.flatMap(p => p.months), [periods]);
+  const rowGroups = useMemo(() => buildDynamicRowGroups(campaigns, allMonths), [campaigns, allMonths]);
   const leftColumnWidths = useMemo(() => computeLeftColumnWidths(leftColumns, rowGroups), [leftColumns, rowGroups]);
   const leftColumnOffsets = leftColumnWidths.reduce((acc, width, idx) => {
     if (idx === 0) return [0];
@@ -96,7 +100,7 @@ export default function CalendarView({ campaigns, filters, onOpenDetail, onSave,
     const monthMap = { 'jan': 0, 'feb': 1, 'mar': 2, 'apr': 3, 'may': 4, 'jun': 5, 'jul': 6, 'aug': 7, 'sep': 8, 'oct': 9, 'nov': 10, 'dec': 11 };
     const shortMonths = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     
-    return ALL_MONTHS.flatMap((m) => {
+    return allMonths.flatMap((m) => {
       // 1. Extract the year
       let y = parseInt(m.f);
       if (isNaN(y)) {
@@ -148,7 +152,7 @@ export default function CalendarView({ campaigns, filters, onOpenDetail, onSave,
 
       return weeks;
     });
-  }, [ALL_MONTHS]);
+  }, [allMonths]);
 
   // Calculate dynamic colSpan for each month when in week view (4 or 5 weeks)
   const monthSpanMap = useMemo(() => {
@@ -159,7 +163,7 @@ export default function CalendarView({ campaigns, filters, onOpenDetail, onSave,
     return counts;
   }, [ALL_WEEKS]);
 
-  const timeColumns = showWeeks ? ALL_WEEKS : ALL_MONTHS;
+  const timeColumns = showWeeks ? ALL_WEEKS : allMonths;
   const colWidth = showWeeks ? 84 : 72; // Slightly wider for week views to fit dates
 
   // 1. Calculate lanes for each row.k to allow multiple campaigns to overlap seamlessly
@@ -180,8 +184,8 @@ export default function CalendarView({ campaigns, filters, onOpenDetail, onSave,
           // Dynamically span to the last week of that month if end missing
           if (ei === -1) ei = si + (monthSpanMap[c.start_month] || 4) - 1; 
         } else {
-          si = ALL_MONTHS.findIndex(m => m.k === c.start_month);
-          ei = ALL_MONTHS.findIndex(m => m.k === c.end_month);
+          si = allMonths.findIndex(m => m.k === c.start_month);
+          ei = allMonths.findIndex(m => m.k === c.end_month);
           if (si === -1) si = 0;
           if (ei === -1) ei = si;
         }
@@ -251,7 +255,7 @@ export default function CalendarView({ campaigns, filters, onOpenDetail, onSave,
               {leftColumns.map((col, idx) => (
                 <th key={`${col.key}-q`} className="cal-th-section" style={{ position: 'sticky', left: leftColumnOffsets[idx], zIndex: 4 + idx, background: '#f3f4f6' }}></th>
               ))}
-              {PERIODS.map(p => {
+              {periods.map(p => {
                 // Calculate dynamic quarter span based on how many weeks its months actually have
                 const qSpan = showWeeks 
                   ? p.months.reduce((sum, m) => sum + (monthSpanMap[m.k] || 4), 0)
@@ -271,7 +275,7 @@ export default function CalendarView({ campaigns, filters, onOpenDetail, onSave,
                   {!showWeeks ? col.label : ''} 
                 </th>
               ))}
-              {ALL_MONTHS.map(m => (
+              {allMonths.map(m => (
                 <th 
                   key={m.k} 
                   className="cal-th-month" 
@@ -392,6 +396,7 @@ export default function CalendarView({ campaigns, filters, onOpenDetail, onSave,
                     } else {
                       const timeUnit = timeColumns[mIdx];
                       const isDropTarget = dropTarget?.rowKey === row.k && dropTarget?.timeKey === timeUnit.k;
+                      const cellMonthKey = showWeeks ? timeUnit.monthKey : timeUnit.k;
 
                       cells.push(
                         <td
@@ -421,7 +426,18 @@ export default function CalendarView({ campaigns, filters, onOpenDetail, onSave,
 
                             onSave({ ...campaign, ...rowFieldUpdates(row), start_month: saveStartMonth, end_month: saveEndMonth }, false);
                           } : undefined}
-                        />
+                        >
+                          {canEdit && (
+                            <button
+                              type="button"
+                              className="cal-cell-add"
+                              title="Add campaign"
+                              onClick={() => onCreateCampaign(row, cellMonthKey)}
+                            >
+                              +
+                            </button>
+                          )}
+                        </td>
                       );
                       mIdx++;
                     }
