@@ -76,7 +76,7 @@ function canEditCalendar(role) {
   return role === 'System Admin' || role === 'User' || role === 'Approver';
 }
 
-export default function CalendarView({ campaigns, filters, onOpenDetail, onOpenForm, onSave, showWeeks }) {
+export default function CalendarView({ campaigns, filters, onOpenDetail, onSave, showWeeks }) {
   const { userRole } = useAuth();
   const canEdit = canEditCalendar(userRole);
   const market = filters.org === 'NZ' ? 'NZ' : filters.org === 'ANZ' ? 'ANZ' : 'AU';
@@ -192,9 +192,7 @@ export default function CalendarView({ campaigns, filters, onOpenDetail, onOpenF
 
       const lanes = packLanes(items);
 
-      const hasEntries = lanes.length > 0;
-      if (lanes.length === 0) lanes.push([]); 
-      if (canEdit && hasEntries) lanes.push([]);
+      if (lanes.length === 0) lanes.push([]);
 
       rowLanes[row.k] = lanes;
       rowLaneCounts[row.k] = lanes.length;
@@ -394,8 +392,6 @@ export default function CalendarView({ campaigns, filters, onOpenDetail, onOpenF
                     } else {
                       const timeUnit = timeColumns[mIdx];
                       const isDropTarget = dropTarget?.rowKey === row.k && dropTarget?.timeKey === timeUnit.k;
-                      // Fallback to monthKey if dealing with weeks (for the form mapping)
-                      const formMonthKey = showWeeks ? timeUnit.monthKey : timeUnit.k;
 
                       cells.push(
                         <td
@@ -425,9 +421,7 @@ export default function CalendarView({ campaigns, filters, onOpenDetail, onOpenF
 
                             onSave({ ...campaign, ...rowFieldUpdates(row), start_month: saveStartMonth, end_month: saveEndMonth }, false);
                           } : undefined}
-                        >
-                          {canEdit && <div className="cal-add-cell" onClick={() => onOpenForm({ id: null, month: formMonthKey, block: row.block, value: row.value, channel: row.channel, account: row.account, priorityNumber: row.priorityNumber })}>＋</div>}
-                        </td>
+                        />
                       );
                       mIdx++;
                     }

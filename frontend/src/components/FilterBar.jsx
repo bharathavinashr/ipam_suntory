@@ -1,5 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
 import { lookupApi } from '../api';
+import { useAuth } from '../context/AuthContext';
+
+// System Admin, User and Approver can create campaigns; Viewer is read-only.
+function canEditCampaigns(role) {
+  return role === 'System Admin' || role === 'User' || role === 'Approver';
+}
 
 const ORG_TO_COUNTRY = { AU: 'Australia', NZ: 'New Zealand', ANZ: 'ANZ' };
 const CATEGORY_TO_DIVISIONS = {
@@ -92,7 +98,9 @@ function MultiSelect({ label, options, selected, onChange, placeholder }) {
   );
 }
 
-export default function FilterBar({ filters, setFilters, showWeeks, setShowWeeks }) {
+export default function FilterBar({ filters, setFilters, showWeeks, setShowWeeks, activeTab, onNewCampaign }) {
+  const { userRole } = useAuth();
+  const canEdit = canEditCampaigns(userRole);
   const [brands, setBrands] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [channels, setChannels] = useState([]);
@@ -152,72 +160,79 @@ export default function FilterBar({ filters, setFilters, showWeeks, setShowWeeks
 
   return (
     <div id="filterbar">
-      <span className="filter-label">Country</span>
-      <div className="chip-group">
-        {['AU', 'NZ', 'ANZ'].map(o => {
-          const active = filters.org === o;
-          return (
-            <button 
-              key={o} 
-              className={`chip ${active ? 'active' : ''}`}
-              onClick={() => setOrg(o)}
-            >
-              {o}
-            </button>
-          );
-        })}
+      <div className="filterbar-row">
+        <span className="filter-label">Country</span>
+        <div className="chip-group">
+          {['AU', 'NZ', 'ANZ'].map(o => {
+            const active = filters.org === o;
+            return (
+              <button
+                key={o}
+                className={`chip ${active ? 'active' : ''}`}
+                onClick={() => setOrg(o)}
+              >
+                {o}
+              </button>
+            );
+          })}
+        </div>
+        <div className="nav-divider"></div>
+        <span className="filter-label">Category</span>
+        <div className="chip-group">
+          {['All', 'Non-Alc', 'Alc'].map(c => {
+            const active = filters.category === c;
+            return (
+              <button
+                key={c}
+                className={`chip ${active ? 'active' : ''}`}
+                onClick={() => setCat(c)}
+              >
+                {c}
+              </button>
+            );
+          })}
+        </div>
       </div>
-      <div className="nav-divider"></div>
-      <span className="filter-label">Category</span>
-      <div className="chip-group">
-        {['All', 'Non-Alc', 'Alc'].map(c => {
-          const active = filters.category === c;
-          return (
-            <button 
-              key={c} 
-              className={`chip ${active ? 'active' : ''}`}
-              onClick={() => setCat(c)}
-            >
-              {c}
-            </button>
-          );
-        })}
-      </div>
-      <div className="nav-divider"></div>
-      <span className="filter-label">Brand</span>
-      <MultiSelect
-        placeholder="All Brands"
-        options={brands}
-        selected={selectedBrands}
-        onChange={val => setFilters(f => ({ ...f, brand: val }))}
-      />
-      <div className="nav-divider"></div>
-      <span className="filter-label">Customer</span>
-      <MultiSelect
-        placeholder="All Customers"
-        options={customers}
-        selected={selectedCustomers}
-        onChange={val => setFilters(f => ({ ...f, customer: val }))}
-      />
-      <div className="nav-divider"></div>
-      <span className="filter-label">Channel</span>
-      <MultiSelect
-        placeholder="All Channels"
-        options={channels}
-        selected={selectedChannels}
-        onChange={val => setFilters(f => ({ ...f, channel: val }))}
-      />
 
-      <div className="spacer"></div>
+      <div className="filterbar-row">
+        <span className="filter-label">Brand</span>
+        <MultiSelect
+          placeholder="All Brands"
+          options={brands}
+          selected={selectedBrands}
+          onChange={val => setFilters(f => ({ ...f, brand: val }))}
+        />
+        <div className="nav-divider"></div>
+        <span className="filter-label">Customer</span>
+        <MultiSelect
+          placeholder="All Customers"
+          options={customers}
+          selected={selectedCustomers}
+          onChange={val => setFilters(f => ({ ...f, customer: val }))}
+        />
+        <div className="nav-divider"></div>
+        <span className="filter-label">Channel</span>
+        <MultiSelect
+          placeholder="All Channels"
+          options={channels}
+          selected={selectedChannels}
+          onChange={val => setFilters(f => ({ ...f, channel: val }))}
+        />
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <button
-          className={`chip ${showWeeks ? 'active' : ''}`}
-          onClick={() => setShowWeeks(!showWeeks)}
-          style={{ fontWeight: 500 }}
-        >
-          {showWeeks ? '📅 Months View' : '📆 Weeks View'}
-        </button>
+        <div className="spacer"></div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {activeTab === 'calendar' && canEdit && (
+            <button className="new-campaign-btn" onClick={onNewCampaign}>➕ New Campaign</button>
+          )}
+          <button
+            className={`chip ${showWeeks ? 'active' : ''}`}
+            onClick={() => setShowWeeks(!showWeeks)}
+            style={{ fontWeight: 500 }}
+          >
+            {showWeeks ? '📅 Months View' : '📆 Weeks View'}
+          </button>
+        </div>
       </div>
     </div>
   );

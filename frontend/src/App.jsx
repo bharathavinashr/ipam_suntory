@@ -74,6 +74,12 @@ export default function App() {
     }
   };
 
+  const handleNewCampaign = () => {
+    setFormCampaignId(null);
+    setFormDefaultMonth(null);
+    setFormDefaultRow(null);
+  };
+
   const handleSave = async (payload, isNew, campaignId) => {
     try {
       if (isNew) {
@@ -118,23 +124,14 @@ export default function App() {
         setFilters={setFilters}
         showWeeks={showWeeks}
         setShowWeeks={setShowWeeks}
+        activeTab={activeTab}
+        onNewCampaign={handleNewCampaign}
       />
 
       <div id="tab-content">
         {activeTab === 'calendar'
           ? <CalendarView campaigns={filteredCampaigns} filters={filters}
               onOpenDetail={setDetailCampaign}
-              onOpenForm={v => {
-                if (v && typeof v === 'object') {
-                  setFormCampaignId(v.id);
-                  setFormDefaultMonth(v.month);
-                  setFormDefaultRow(v.block ? { block: v.block, value: v.value, channel: v.channel, account: v.account, priorityNumber: v.priorityNumber } : null);
-                } else {
-                  setFormCampaignId(v);
-                  setFormDefaultMonth(null);
-                  setFormDefaultRow(null);
-                }
-              }}
               onSave={handleSave}
               showWeeks={showWeeks} />
           : <ToolView campaigns={filteredCampaigns}
