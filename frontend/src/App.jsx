@@ -8,15 +8,14 @@ import CalendarView from './components/CalendarView';
 import ToolView from './components/ToolView';
 import DetailModal from './components/DetailModal';
 import FormModal from './components/FormModal';
-import DataNavi from './components/DataNavi';
 import UserAdmin from './components/UserAdmin';
+import GenieChat from './components/GenieChat';
 
 export default function App() {
   const { loading: authLoading, error: authError, currentUser } = useAuth();
   const [campaigns, setCampaigns] = useState([]);
   const [activeTab, setActiveTab] = useState('calendar');
   const [showWeeks, setShowWeeks] = useState(false);
-  const [dnOpen, setDnOpen] = useState(false);
   const [usersOpen, setUsersOpen] = useState(false);
   const [filters, setFilters] = useState({ org:'AU', category:'All', brand:['All'], customer:['All'], channel:['All'] });
   const [detailCampaign, setDetailCampaign] = useState(null);
@@ -114,8 +113,6 @@ export default function App() {
       <TopNav
         activeTab={activeTab}
         setActiveTab={setActiveTab}
-        dnOpen={dnOpen}
-        setDnOpen={setDnOpen}
         onOpenUsers={() => setUsersOpen(true)}
       />
 
@@ -161,10 +158,7 @@ export default function App() {
 
       {usersOpen && <UserAdmin onClose={() => setUsersOpen(false)} />}
 
-      {dnOpen
-        ? <DataNavi campaigns={campaigns} onClose={() => setDnOpen(false)} />
-        : <button id="dn-float" onClick={() => setDnOpen(true)}>◈</button>
-      }
+      <GenieChat />
     </div>
   );
 }
