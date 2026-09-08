@@ -31,7 +31,7 @@ export const TIERS = {
 
 // Category dropdown shown below Country on the campaign form; also drives the calendar's
 // Category block (one row per option). Add new options here to get a new row for free.
-export const CATEGORY_OPTIONS = ["NDP"];
+export const CATEGORY_OPTIONS = ["NPD", "Consumer Promotion", "Core", "Customer Events"];
 
 export const STATUS_COL = {
   "Draft": "#6B7280",

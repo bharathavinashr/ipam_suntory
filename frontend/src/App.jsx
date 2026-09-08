@@ -17,7 +17,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('calendar');
   const [showWeeks, setShowWeeks] = useState(false);
   const [usersOpen, setUsersOpen] = useState(false);
-  const [filters, setFilters] = useState({ org:'AU', category:'All', brand:['All'], customer:['All'], channel:['All'] });
+  const [filters, setFilters] = useState({ org:'ANZ', category:'All', brand:['All'], customer:['All'], channel:['All'] });
   const [detailCampaign, setDetailCampaign] = useState(null);
   const [formCampaignId, setFormCampaignId] = useState(undefined);   // undefined=closed, null=new, string=edit
   const [formDefaultMonth, setFormDefaultMonth] = useState(null);
@@ -41,7 +41,11 @@ export default function App() {
   }, []);
 
   const filteredCampaigns = useMemo(() => {
-    const market = filters.org === 'NZ' ? 'NZ' : filters.org === 'ANZ' ? 'ANZ' : 'AU';
+    // ANZ campaigns span both markets, so they're always included alongside whichever
+    // single market is selected; selecting ANZ itself shows AU, NZ and ANZ campaigns.
+    const allowedMarkets = filters.org === 'NZ' ? ['NZ', 'ANZ']
+      : filters.org === 'ANZ' ? ['AU', 'NZ', 'ANZ']
+      : ['AU', 'ANZ'];
     const brandArr = Array.isArray(filters.brand) ? filters.brand : [filters.brand];
     const custArr = Array.isArray(filters.customer) ? filters.customer : [filters.customer];
     const chanArr = Array.isArray(filters.channel) ? filters.channel : [filters.channel];
@@ -50,7 +54,7 @@ export default function App() {
     const chanAll = chanArr.includes('All') || chanArr.length === 0;
 
     return campaigns.filter(c => {
-      if (c.market?.toUpperCase() !== market) return false;
+      if (!allowedMarkets.includes(c.market?.toUpperCase())) return false;
       if (filters.category !== 'All' && c.category !== filters.category) return false;
       if (!brandAll && !brandArr.includes(c.brand)) return false;
       if (!custAll && !custArr.includes(c.customer)) return false;

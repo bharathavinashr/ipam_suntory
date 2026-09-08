@@ -22,6 +22,21 @@ function matchBrandFromName(name) {
   return KNOWN_BRAND_NAMES.find(b => lower.includes(b.toLowerCase())) || '';
 }
 
+const DIVISION_ORDER = ['Non-Alcohol', 'Alcohol'];
+
+// Backend returns divisions alphabetically; reorder so Non-Alcohol appears before Alcohol
+// in the dropdown, with any other divisions kept after in their original order.
+function sortDivisionOpts(opts) {
+  return [...opts].sort((a, b) => {
+    const ia = DIVISION_ORDER.indexOf(a.value);
+    const ib = DIVISION_ORDER.indexOf(b.value);
+    if (ia === -1 && ib === -1) return 0;
+    if (ia === -1) return 1;
+    if (ib === -1) return -1;
+    return ia - ib;
+  });
+}
+
 const PRIORITY_NUMBERS = ['#1', '#2', '#3', '#4', '#5'];
 
 const DEFAULT_MILESTONES = [
@@ -214,7 +229,7 @@ export default function FormModal({ campaignId, campaigns, onClose, onSave, defa
   // Load divisions on mount
   useEffect(() => {
     lookupApi.getDivisions()
-      .then(d => setDivisionOpts(d.options || []))
+      .then(d => setDivisionOpts(sortDivisionOpts(d.options || [])))
       .catch(() => setDivisionOpts([]));
   }, []);
 

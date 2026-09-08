@@ -163,7 +163,7 @@ export default function FilterBar({ filters, setFilters, showWeeks, setShowWeeks
       <div className="filterbar-row">
         <span className="filter-label">Country</span>
         <div className="chip-group">
-          {['AU', 'NZ', 'ANZ'].map(o => {
+          {['ANZ', 'AU', 'NZ'].map(o => {
             const active = filters.org === o;
             return (
               <button
@@ -203,14 +203,6 @@ export default function FilterBar({ filters, setFilters, showWeeks, setShowWeeks
           onChange={val => setFilters(f => ({ ...f, brand: val }))}
         />
         <div className="nav-divider"></div>
-        <span className="filter-label">Customer</span>
-        <MultiSelect
-          placeholder="All Customers"
-          options={customers}
-          selected={selectedCustomers}
-          onChange={val => setFilters(f => ({ ...f, customer: val }))}
-        />
-        <div className="nav-divider"></div>
         <span className="filter-label">Channel</span>
         <MultiSelect
           placeholder="All Channels"
@@ -218,6 +210,15 @@ export default function FilterBar({ filters, setFilters, showWeeks, setShowWeeks
           selected={selectedChannels}
           onChange={val => setFilters(f => ({ ...f, channel: val }))}
         />
+        <div className="nav-divider"></div>
+        <span className="filter-label">Customer</span>
+        <MultiSelect
+          placeholder="All Customers"
+          options={customers}
+          selected={selectedCustomers}
+          onChange={val => setFilters(f => ({ ...f, customer: val }))}
+        />
+       
 
         <div className="spacer"></div>
 
