@@ -104,6 +104,7 @@ export default function FilterBar({ filters, setFilters, showWeeks, setShowWeeks
   const [brands, setBrands] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [channels, setChannels] = useState([]);
+  const [channelCodesByLabel, setChannelCodesByLabel] = useState({});
 
   // Brand options come from ro_products.brand_name, scoped to the selected country + category
   // (mirrors the Brand lookup used in the campaign form's FormModal).
@@ -120,14 +121,18 @@ export default function FilterBar({ filters, setFilters, showWeeks, setShowWeeks
   }, [filters.org, filters.category]);
 
   // Customer options come from ro_customers.account_name, scoped to the selected country +
-  // category (mirrors the RO Account lookup used in the campaign form's FormModal).
+  // category + channel (mirrors the RO Account lookup used in the campaign form's FormModal).
   useEffect(() => {
     const country = ORG_TO_COUNTRY[filters.org] || ORG_TO_COUNTRY.AU;
     const divisions = CATEGORY_TO_DIVISIONS[filters.category] || CATEGORY_TO_DIVISIONS.All;
+    const selChannels = Array.isArray(filters.channel) ? filters.channel : [filters.channel || 'All'];
+    const channelCode = selChannels.includes('All')
+      ? ''
+      : selChannels.map(label => channelCodesByLabel[label]).filter(Boolean).join(',');
 
     let cancelled = false;
     fetchOptionsByDivision(
-      (division, ctry) => lookupApi.getAccounts(ctry, '', '', division),
+      (division, ctry) => lookupApi.getAccounts(ctry, channelCode, '', division),
       country,
       divisions
     )
@@ -135,7 +140,7 @@ export default function FilterBar({ filters, setFilters, showWeeks, setShowWeeks
       .catch(() => { if (!cancelled) setCustomers([]); });
 
     return () => { cancelled = true; };
-  }, [filters.org, filters.category]);
+  }, [filters.org, filters.category, filters.channel, channelCodesByLabel]);
 
   // Channel options come from ro_customers.channel_name, scoped to the selected country
   // (mirrors the RO Channel lookup used in the campaign form's FormModal; channels aren't
@@ -145,8 +150,13 @@ export default function FilterBar({ filters, setFilters, showWeeks, setShowWeeks
 
     let cancelled = false;
     lookupApi.getChannels(country)
-      .then(d => { if (!cancelled) setChannels((d.options || []).map(o => o.label).sort((a, b) => a.localeCompare(b))); })
-      .catch(() => { if (!cancelled) setChannels([]); });
+      .then(d => {
+        if (cancelled) return;
+        const opts = d.options || [];
+        setChannels(opts.map(o => o.label).sort((a, b) => a.localeCompare(b)));
+        setChannelCodesByLabel(Object.fromEntries(opts.map(o => [o.label, o.value])));
+      })
+      .catch(() => { if (!cancelled) { setChannels([]); setChannelCodesByLabel({}); } });
 
     return () => { cancelled = true; };
   }, [filters.org]);
@@ -208,7 +218,7 @@ export default function FilterBar({ filters, setFilters, showWeeks, setShowWeeks
           placeholder="All Channels"
           options={channels}
           selected={selectedChannels}
-          onChange={val => setFilters(f => ({ ...f, channel: val }))}
+          onChange={val => setFilters(f => ({ ...f, channel: val, customer: ['All'] }))}
         />
         <div className="nav-divider"></div>
         <span className="filter-label">Customer</span>
